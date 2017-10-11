@@ -17,6 +17,7 @@
 #define LCD_FUNCTIONSET 0x20
 #define LCD_SETCGRAMADDR 0x40
 #define LCD_SETDDRAMADDR 0x80
+#define LCD_ROW_WIDTH 0x40
 
 // flags for display entry mode
 #define LCD_ENTRYRIGHT 0x00
@@ -103,21 +104,9 @@ void Lcd_Home() {
     __delay_ms(2);
 }
 
-void Lcd_Set_Cursor(char a, char b) {
-    char temp, z, y;
-    if (a == 1) {
-        temp = 0x80 + b;
-        z = temp >> 4;
-        y = (0x80 + b) & 0x0F;
-        Lcd_Cmd(z);
-        Lcd_Cmd(y);
-    } else if (a == 2) {
-        temp = 0xC0 + b;
-        z = temp >> 4;
-        y = (0xC0 + b) & 0x0F;
-        Lcd_Cmd(z);
-        Lcd_Cmd(y);
-    }
+void Lcd_Set_Cursor(char row, char col) {
+    Lcd_Cmd(LCD_SETDDRAMADDR + row*LCD_ROW_WIDTH + col);
+    __delay_us(50);
 }
 
 void Lcd_Init() {

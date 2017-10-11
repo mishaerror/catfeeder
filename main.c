@@ -16,12 +16,18 @@ typedef struct FEEDING_TIME_t {
     unsigned short quantity;
 } FEEDING_TIME;
 
-unsigned short PRESSED_KEY = 0;
+unsigned char PRESSED_KEY = 0;
+
+#define KEY0_PRESSED 0x1
+#define KEY1_PRESSED 0x2
+#define KEY2_PRESSED 0x4
 
 FEEDING_TIME FEEDING1 = {0, 0, 0};
 FEEDING_TIME FEEDING2 = {0, 0, 0};
 FEEDING_TIME FEEDING3 = {0, 0, 0};
 FEEDING_TIME FEEDING4 = {0, 0, 0};
+
+#define debounce_delay() __delay_ms(50)
 
 int getDailyWeight() {
     int sum = FEEDING1.quantity + FEEDING2.quantity + FEEDING3.quantity + FEEDING4.quantity;
@@ -34,76 +40,74 @@ short totalFeedings() {
 }
 
 void enableInterrupts() {
-    INTCONbits.GIE = 1; //global interrupts
-    INTCONbits.PEIE = 1; //perferal interrupts
+
+    TRISBbits.RB0 = 1;
+    TRISBbits.RB1 = 1;
+    TRISBbits.RB2 = 1;
+    RBPU = 0;// activate pullups
 
     INTCONbits.INT0IE = 1; //enter button
     INTCON3bits.INT1IE = 1; //plus button
     INTCON3bits.INT2IE = 1; //minus button
-    TRISBbits.RB0 = 1;
-    TRISBbits.RB1 = 1;
-    TRISBbits.RB2 = 1;
+    INTEDG0 = 0;//falling edge
+    INTEDG1 = 0;
+    INTEDG2 = 0;
+
+    INTCONbits.GIE = 1; //global interrupts
+    INTCONbits.PEIE = 1; //perferal interrupts
 }
 
 void setupPorts() {
     TRISA = 0;
     TRISCbits.RC4 = 0;
-
-    PORTCbits.RC4 = 1;
-
+    PORTCbits.RC4 = 1;//signal lamp
 }
 
-void time_to_digit(char time) {
-    if(time < 10){
-        Lcd_Write_Char('0');
-    } else {
-        Lcd_Write_Char(time /10 + 48);
-    }
-    Lcd_Write_Char(time%10 + 48);
-        
+void writeTimeToLcd(int row, int col) {
+    Lcd_Set_Cursor(row, col);
+    Lcd_Write_String("Time:");
+    Lcd_Write_String(str_hours);
+    Lcd_Write_Char(':');
+    Lcd_Write_String(str_minutes);
+    Lcd_Write_Char(':');
+    Lcd_Write_String(str_seconds);
+
 }
 
 void interrupt handleInterrupt() {
 
     if (TMR1IE && TMR1IF) { // any timer 1 interrupts?
         TMR1IF = 0;
-        TMR1 = 0x8000;
+        TMR1 = TMR1_RESET_VALUE;
 
         PORTCbits.RC4 ^= 1;
         addOneSecond();
-        
-        Lcd_Home();
-        Lcd_Write_String("Time: ");
-        time_to_digit(hours);
-        Lcd_Write_Char(':');
-        time_to_digit(minutes);
-        Lcd_Write_Char(':');
-        time_to_digit(seconds);
-    
+
+        writeTimeToLcd(0, 0);
     }
 
     //handle button press events
     if (INT0IF) {
         INT0IF = 0;
-        __delay_ms(100);
+        debounce_delay();
         if (!PORTBbits.RB0) {
-            PRESSED_KEY |= 0b0000;
+            PRESSED_KEY |= KEY0_PRESSED;
         }
         return;
     }
     if (INT1IF) {
         INT1IF = 0;
-        __delay_ms(100);
+        debounce_delay();
         if (!PORTBbits.RB1) {
-            PRESSED_KEY |= 0b0010;
+            PRESSED_KEY |= KEY1_PRESSED;
         }
         return;
     }
     if (INT2IF) {
         INT1IF = 0;
-        __delay_ms(100);
+        debounce_delay();
         if (!PORTBbits.RB2) {
-            PRESSED_KEY |= 0b0100;
+            PRESSED_KEY |= KEY2_PRESSED;
         }
         return;
     }
@@ -121,20 +125,16 @@ void renderScreen() {
 
 }
 
-
 void main(void) {
-    int i;
     setupPorts();
     setupRealTimeClock();
     enableInterrupts();
-    unsigned int a;
 
     Lcd_Init();
     Lcd_Clear();
     Lcd_Home();
-    
-    //
+
     while (1) {
-    
+
     }
 }
