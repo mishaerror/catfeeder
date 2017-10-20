@@ -12,6 +12,8 @@
 
 #define debounce_delay() __delay_ms(50)
 
+#define BLANK_LINE "                "
+
 enum KEY_PRESSED_t {
     KEY_ENTER,
     KEY_PLUS,
@@ -44,6 +46,10 @@ FEEDING_t feedings[4] = {
 };
 unsigned char feedIndex = 0;
 unsigned char tmp_num; //hold value of currently edited number
+unsigned int totalQty = 0;
+unsigned char totalFeedings = 0;
+char lcd_line_1[] = "****************";
+char lcd_line_2[] = "****************";
 
 void start_screen_key_pressed() {
     if (key_pressed == KEY_ENTER) {
@@ -258,8 +264,12 @@ void interrupt handleInterrupt() {
     if (TMR1IE && TMR1IF) { // any timer 1 interrupts?
         TMR1IF = 0;
         TMR1 = TMR1_RESET_VALUE;
-
-        addOneSecond();
+        
+        tick++;
+        if(tick == 1) {
+            addOneSecond();
+            tick = 0;
+        }
 
         writeTimeToLcd(0, 0);
     }
@@ -298,66 +308,109 @@ void interrupt handleInterrupt() {
 }
 
 void renderScreen() {
+    char tick_mark = tick ? ' ' : ':';
+
     switch (display_state) {
         case ST_START_SCREEN:
+            sprintf(lcd_line_1, "Time: %d%s%d     ", hours, tick_mark, minutes);
+            sprintf(lcd_line_2, "Qty:  %dg %d/day", totalQty, totalFeedings);
             /*
-            ****************
-            Time: 12:44
+             ****************
+            Time: 12:44     
             Qty:  40g  2/day
-            ****************
+             ****************
              */
             break;
         case ST_EDIT_TIME_HOUR:
+            if(tick){
+                sprintf(lcd_line_1, "Time: %d:%d     ", tmp_num, minutes);
+            } else {
+                sprintf(lcd_line_1, "Time: __:%d     ", minutes);
+            }
+            sprintf(lcd_line_2, BLANK_LINE, totalQty, totalFeedings);
             /*
-            ****************	
+             ****************	
             Time: __:43
 
-            ****************             
+             ****************             
              */
-        break;
+            break;
         case ST_EDIT_TIME_MINUTE:
+            if(tick){
+                sprintf(lcd_line_1, "Time: %d:%d     ", hours, tmp_num);
+            } else {
+                sprintf(lcd_line_1, "Time: %d:__     ", hours);
+            }
+            sprintf(lcd_line_2, BLANK_LINE, totalQty, totalFeedings);
             /*
-            ****************	
+             ****************	
             Time: 12:__
 
-            ****************             
+             ****************             
              */
             break;
 
         case ST_VIEW_FEED:
+            sprintf(lcd_line_1, "Feed %d: %02d:%02d   ", feedIndex + 1, feedings[feedIndex].hour, feedings[feedIndex].minute);
+            sprintf(lcd_line_2, "Qty:    %dg", totalQty, totalFeedings);
             /*
-            ****************
-            Feed 1: 05:30
-            Qty:    20g
-            ****************
+             ****************
+             Feed 1: 05:30    
+             Qty:    20g
+             ****************
              */
             break;
 
         case ST_EDIT_FEED_HOUR:
+            if(tick){
+              sprintf(lcd_line_1, "Feed %d: %02d:%02d   ", feedIndex + 1, tmp_num, feedings[feedIndex].minute);
+            } else {
+              sprintf(lcd_line_1, "Feed %d: __:%02d   ", feedIndex + 1, feedings[feedIndex].minute);
+            }
+            sprintf(lcd_line_2, "Qty:    %dg", totalQty, totalFeedings);
             /*
-            ****************
-            Feed 1: __:30
-            Qty:    20g
-            ****************
+             ****************
+             Feed 1: __:30
+             Qty:    20g
+             ****************
              */
             break;
         case ST_EDIT_FEED_MINUTE:
+            if(tick){
+              sprintf(lcd_line_1, "Feed %d: %02d:%02d   ", feedIndex + 1, feedings[feedIndex].hour, tmp_num);
+            } else {
+              sprintf(lcd_line_1, "Feed %d: %02d:__   ", feedIndex + 1, feedings[feedIndex].hour);
+            }
+            sprintf(lcd_line_2, "Qty:    %dg", totalQty, totalFeedings);
             /*
-            ****************
-            Feed 1: 05:__
-            Qty:    20g
-            ****************
+             ****************
+             Feed 1: 05:__
+             Qty:    20g
+             ****************
              */
             break;
         case ST_EDIT_FEED_QTY:
+            sprintf(lcd_line_1, "Feed %d: %02d:%02d   ", feedIndex + 1, feedings[feedIndex].hour, feedings[feedIndex].minute);
+            if(tick){
+              sprintf(lcd_line_2, "Qty:    %02dg", totalQty, totalFeedings);
+            } else {
+              sprintf(lcd_line_2, "Qty:    __g", totalQty, totalFeedings);
+          }
             /*
-            ****************
-            Feed 1: 05:30
-            Qty:    __g
-            ****************
+             ****************
+             Feed 1: 05:30
+             Qty:    __g
+             ****************
              */
             break;
     }
+
+    Lcd_Home();
+    Lcd_Clear();
+    Lcd_Write_String(lcd_line_1);
+    Lcd_Set_Cursor(1, 0);
+    Lcd_Write_String(lcd_line_2);
+
 }
 
 void main(void) {
