@@ -129,7 +129,7 @@ void Lcd_Init() {
     Lcd_Cmd(LCD_FUNCTIONSET | lcd_display_function);
     __delay_ms(5);
 
-    lcd_display_control = LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKON;
+    lcd_display_control = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
     Lcd_Cmd(LCD_DISPLAYCONTROL | lcd_display_control);
     __delay_ms(5);
 

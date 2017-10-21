@@ -30,18 +30,14 @@ void addOneSecond() {
         seconds = 0;
         minutes++;
     }
-    time_to_digit(seconds, str_seconds);
 
     if (minutes > 59) {
         minutes = 0;
         hours++;
     }
-    time_to_digit(minutes, str_minutes);
 
     if (hours > 23) {
         hours = 0;
     }
     
-    time_to_digit(hours, str_hours);
-
 }

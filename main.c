@@ -22,7 +22,7 @@ enum KEY_PRESSED_t {
 
 //states
 
-enum DISPLAY_STATE_t {
+typedef enum {
     ST_START_SCREEN,
     ST_EDIT_TIME_HOUR,
     ST_EDIT_TIME_MINUTE,
@@ -30,7 +30,7 @@ enum DISPLAY_STATE_t {
     ST_EDIT_FEED_HOUR,
     ST_EDIT_FEED_MINUTE,
     ST_EDIT_FEED_QTY
-} display_state = ST_START_SCREEN;
+} DISPLAY_STATE_t;
 
 typedef struct {
     char hour;
@@ -46,10 +46,14 @@ FEEDING_t feedings[4] = {
 };
 unsigned char feedIndex = 0;
 unsigned char tmp_num; //hold value of currently edited number
+char str_tmp_num[] = "  ";
 unsigned int totalQty = 0;
+char str_total_qty[] = " 0";
 unsigned char totalFeedings = 0;
 char lcd_line_1[] = "****************";
 char lcd_line_2[] = "****************";
+
+DISPLAY_STATE_t display_state;
 
 void start_screen_key_pressed() {
     if (key_pressed == KEY_ENTER) {
@@ -232,8 +236,8 @@ void enableInterrupts() {
     INTCON3bits.INT1IE = 1; //plus button
     INTCON3bits.INT2IE = 1; //minus button
     INTEDG0 = 1; //rising edge
-    INTEDG1 = 0;
-    INTEDG2 = 0;
+    INTEDG1 = 1;
+    INTEDG2 = 1;
 
     ADCON1bits.PCFG = 0b0111; //RB ports are digital
 
@@ -247,110 +251,104 @@ void setupPorts() {
     PORTCbits.RC4 = 1; //signal lamp
 }
 
-void renderScreen() {
-    char tick_mark = tick ? ' ' : ':';
-
-    switch (display_state) {
+void renderScreenTemplate(DISPLAY_STATE_t state) {
+    switch (state) {
         case ST_START_SCREEN:
-            sprintf(lcd_line_1, "Time: %d%s%d     ", hours, tick_mark, minutes);
-            sprintf(lcd_line_2, "Qty:  %dg %d/day", totalQty, totalFeedings);
-            /*
-             ****************
-            Time: 12:44     
-            Qty:  40g  2/day
-             ****************
-             */
-            break;
         case ST_EDIT_TIME_HOUR:
-            if (tick) {
-                sprintf(lcd_line_1, "Time: %d:%d     ", tmp_num, minutes);
-            } else {
-                sprintf(lcd_line_1, "Time: __:%d     ", minutes);
-            }
-            sprintf(lcd_line_2, BLANK_LINE, totalQty, totalFeedings);
-            /*
-             ****************	
-            Time: __:43
-
-             ****************             
-             */
-            break;
         case ST_EDIT_TIME_MINUTE:
-            if (tick) {
-                sprintf(lcd_line_1, "Time: %d:%d     ", hours, tmp_num);
-            } else {
-                sprintf(lcd_line_1, "Time: %d:__     ", hours);
-            }
-            sprintf(lcd_line_2, BLANK_LINE, totalQty, totalFeedings);
-            /*
-             ****************	
-            Time: 12:__
-
-             ****************             
-             */
+            Lcd_Set_Cursor(0, 0);
+            Lcd_Write_String("Time:   :       ");
+            Lcd_Set_Cursor(1, 0);
+            Lcd_Write_String("Qty:    g   /day");
             break;
 
         case ST_VIEW_FEED:
-            sprintf(lcd_line_1, "Feed %d: %02d:%02d   ", feedIndex + 1, feedings[feedIndex].hour, feedings[feedIndex].minute);
-            sprintf(lcd_line_2, "Qty:    %dg", totalQty, totalFeedings);
-            /*
-             ****************
-             Feed 1: 05:30    
-             Qty:    20g
-             ****************
-             */
+        case ST_EDIT_FEED_HOUR:
+        case ST_EDIT_FEED_MINUTE:
+        case ST_EDIT_FEED_QTY:
+            Lcd_Set_Cursor(0, 0);
+            Lcd_Write_String("Feed   :   :    ");
+            Lcd_Set_Cursor(1, 0);
+            Lcd_Write_String("Qty:      g     ");
+            break;
+    }
+}
+
+void writeStartScreen(char * hour, char* minute, char tick, char* qty, char times) {
+    /*
+     ****************
+     Time: 12:44     
+     Qty:  40g  2/day
+     ****************
+     */
+    Lcd_Set_Cursor(0, 6);
+    Lcd_Write_String(hour);
+    Lcd_Write_Char(tick);
+    Lcd_Write_String(minute);
+    Lcd_Set_Cursor(1, 6);
+    Lcd_Write_String(qty);
+    Lcd_Set_Cursor(1, 11);
+    Lcd_Write_Char(times);
+}
+
+void write_feeding_screen(char feedNo, char* feedHour, char* feedMinute, char* feedQty) {
+    /*
+     ****************
+     Feed 1: 05:30    
+     Qty:    20g
+     ****************
+     */
+    Lcd_Set_Cursor(0, 5);
+    Lcd_Write_Char(feedNo);
+    Lcd_Set_Cursor(0, 8);
+    Lcd_Write_String(feedHour);
+    Lcd_Set_Cursor(0, 11);
+    Lcd_Write_String(feedMinute);
+    Lcd_Set_Cursor(1, 9);
+    Lcd_Write_String(feedQty);
+}
+
+void updateScreen() {
+    char feed_hour[] = "  ";
+    char feed_minute[] = " ";
+    char feed_qty[] = " ";
+    time_to_digit(feedings[feedIndex].hour, feed_hour);
+    time_to_digit(feedings[feedIndex].minute, feed_minute);
+    time_to_digit(feedings[feedIndex].quantity, feed_qty);
+
+    time_to_digit(hours, str_hours);
+    time_to_digit(minutes, str_minutes);
+    time_to_digit(totalQty, str_total_qty);
+    time_to_digit(tmp_num, str_tmp_num);
+
+    switch (display_state) {
+        case ST_START_SCREEN:
+            writeStartScreen(str_hours, str_minutes, tick ? ':' : ' ',
+                    str_total_qty, totalFeedings + 48);
+            break;
+        case ST_EDIT_TIME_HOUR:
+            writeStartScreen(tick ? str_tmp_num : "__", str_minutes, ':',
+                    str_total_qty, totalFeedings + 48);
+            break;
+        case ST_EDIT_TIME_MINUTE:
+            writeStartScreen(str_hours, tick ? str_tmp_num : "__", ':',
+                    str_total_qty, totalFeedings + 48);
+            break;
+
+        case ST_VIEW_FEED:
+            write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, feed_qty);
             break;
 
         case ST_EDIT_FEED_HOUR:
-            if (tick) {
-                sprintf(lcd_line_1, "Feed %d: %02d:%02d   ", feedIndex + 1, tmp_num, feedings[feedIndex].minute);
-            } else {
-                sprintf(lcd_line_1, "Feed %d: __:%02d   ", feedIndex + 1, feedings[feedIndex].minute);
-            }
-            sprintf(lcd_line_2, "Qty:    %dg", totalQty, totalFeedings);
-            /*
-             ****************
-             Feed 1: __:30
-             Qty:    20g
-             ****************
-             */
+            write_feeding_screen(feedIndex + 1 + 48, tick ? feed_hour : " ", feed_minute, feed_qty);
             break;
         case ST_EDIT_FEED_MINUTE:
-            if (tick) {
-                sprintf(lcd_line_1, "Feed %d: %02d:%02d   ", feedIndex + 1, feedings[feedIndex].hour, tmp_num);
-            } else {
-                sprintf(lcd_line_1, "Feed %d: %02d:__   ", feedIndex + 1, feedings[feedIndex].hour);
-            }
-            sprintf(lcd_line_2, "Qty:    %dg", totalQty, totalFeedings);
-            /*
-             ****************
-             Feed 1: 05:__
-             Qty:    20g
-             ****************
-             */
+            write_feeding_screen(feedIndex + 1 + 48, feed_hour, tick ? feed_minute : " ", feed_qty);
             break;
         case ST_EDIT_FEED_QTY:
-            sprintf(lcd_line_1, "Feed %d: %02d:%02d   ", feedIndex + 1, feedings[feedIndex].hour, feedings[feedIndex].minute);
-            if (tick) {
-                sprintf(lcd_line_2, "Qty:    %02dg", totalQty, totalFeedings);
-            } else {
-                sprintf(lcd_line_2, "Qty:    __g", totalQty, totalFeedings);
-            }
-            /*
-             ****************
-             Feed 1: 05:30
-             Qty:    __g
-             ****************
-             */
+            write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, tick ? feed_qty : " ");
             break;
     }
-
-    Lcd_Home();
-    Lcd_Clear();
-    Lcd_Write_String(lcd_line_1);
-    Lcd_Set_Cursor(1, 0);
-    Lcd_Write_String(lcd_line_2);
-
 }
 
 void interrupt handleInterrupt() {
@@ -359,12 +357,14 @@ void interrupt handleInterrupt() {
         TMR1IF = 0;
         TMR1 = TMR1_RESET_VALUE;
 
-        tick++;
-        if (tick == 1) {
-            addOneSecond();
+        tick++;//half second tick
+        if (tick == 2) {//rollover
             tick = 0;
+            LATCbits.LATC4 ^= 1;//flip indicator light
+            addOneSecond();
         }
-
+        updateScreen();
+        return;
     }
 
     //handle button press events
@@ -373,33 +373,31 @@ void interrupt handleInterrupt() {
         debounce_delay();
         if (PORTBbits.RB0) {
             key_pressed = KEY_ENTER;
-            PORTCbits.RC4 ^= 1;
         }
-
+        updateScreen();
         return;
     }
     if (INT1IF) {
         INT1IF = 0;
         debounce_delay();
-        if (!PORTBbits.RB1) {
+        if (PORTBbits.RB1) {
             key_pressed = KEY_PLUS;
-            PORTCbits.RC4 ^= 1;
         }
+        updateScreen();
         return;
     }
     if (INT2IF) {
         INT1IF = 0;
         debounce_delay();
-        if (!PORTBbits.RB2) {
+        if (PORTBbits.RB2) {
             key_pressed = KEY_MINUS;
             PORTCbits.RC4 ^= 1;
         }
+        updateScreen();
         return;
     }
 
-    renderScreen();
 }
-
 
 void main(void) {
     setupPorts();
@@ -408,8 +406,9 @@ void main(void) {
 
     Lcd_Init();
     Lcd_Clear();
-    Lcd_Home();
 
+    display_state = ST_START_SCREEN;
+    renderScreenTemplate(display_state);
     while (1) {
 
     }
