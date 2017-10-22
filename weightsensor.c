@@ -15,10 +15,6 @@
 #include "xcincludes.h"
 #include "weightsensor.h"
 
-#define SERIAL_CLK_OUT PORTCbits.RC6
-#define SERIAL_DATA_IN PORTCbits.RC7
-#define GAIN 1 //x128
-
 long weightOffset = 0;
 
 void initHX711() {
@@ -34,7 +30,7 @@ long readSerialData() {
     SERIAL_CLK_OUT = 0;
     serialData = 0;
     while (SERIAL_DATA_IN);
-    for (unsigned short i = 0; i < 24; i++) {
+    for (unsigned char i = 0; i < 24; i++) {
         SERIAL_CLK_OUT = 1;
         serialData = serialData << 1;
         SERIAL_CLK_OUT = 0;

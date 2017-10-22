@@ -9,6 +9,7 @@
 #include "realtimeclock.h"
 #include "lcd.h"
 #include <stdio.h>
+#include "motor.h"
 
 #define debounce_delay() __delay_ms(50)
 
@@ -29,7 +30,8 @@ typedef enum {
     ST_VIEW_FEED,
     ST_EDIT_FEED_HOUR,
     ST_EDIT_FEED_MINUTE,
-    ST_EDIT_FEED_QTY
+    ST_EDIT_FEED_QTY,
+    ST_LOADING_FOOD
 } DISPLAY_STATE_t;
 
 typedef struct {
@@ -49,9 +51,10 @@ unsigned char tmp_num; //hold value of currently edited number
 char str_tmp_num[] = "  ";
 unsigned int totalQty = 0;
 char str_total_qty[] = " 0";
+unsigned char loaded_qty = 0;
 unsigned char totalFeedings = 0;
-char lcd_line_1[] = "****************";
-char lcd_line_2[] = "****************";
+
+unsigned long weightSensorData = 0x0;
 
 DISPLAY_STATE_t display_state;
 
@@ -271,7 +274,32 @@ void renderScreenTemplate(DISPLAY_STATE_t state) {
             Lcd_Set_Cursor(1, 0);
             Lcd_Write_String("Qty:      g     ");
             break;
+        case ST_LOADING_FOOD:
+            Lcd_Set_Cursor(0, 0);
+            Lcd_Write_String("Loading feed    ");
+            Lcd_Set_Cursor(1, 0);
+            Lcd_Write_String("Qty:   /  g     ");
+            break;
     }
+}
+
+void write_loading_screen(unsigned char feed, unsigned char qty) {
+/*
+    ****************
+    Loading feed 1
+    Qty: 02/25g
+    ****************
+ * */
+    char str_qty = " ";
+    
+    Lcd_Set_Cursor(0, 13);
+    Lcd_Write_Char(feed);
+    Lcd_Set_Cursor(1, 5);
+    time_to_digit(qty, str_qty);
+    Lcd_Write_String(str_qty);
+    Lcd_Set_Cursor(1, 8);
+    time_to_digit(feedings[feed].quantity, str_qty);
+    Lcd_Write_String(str_qty);
 }
 
 void writeStartScreen(char * hour, char* minute, char tick, char* qty, char times) {
@@ -348,6 +376,8 @@ void updateScreen() {
         case ST_EDIT_FEED_QTY:
             write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, tick ? feed_qty : " ");
             break;
+        case ST_LOADING_FOOD:
+            write_loading_screen(feedIndex + 1 + 48, loaded_qty);
     }
 }
 
@@ -403,6 +433,8 @@ void main(void) {
     setupPorts();
     setupRealTimeClock();
     enableInterrupts();
+    
+    setupPwm();
 
     Lcd_Init();
     Lcd_Clear();
