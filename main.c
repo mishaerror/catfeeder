@@ -8,8 +8,8 @@
 #include "xcincludes.h"
 #include "realtimeclock.h"
 #include "lcd.h"
+#include "stepper_motor.h"
 #include <stdio.h>
-#include "motor.h"
 
 #define debounce_delay() __delay_ms(50)
 
@@ -426,6 +426,14 @@ void interrupt handleInterrupt() {
         updateScreen();
         return;
     }
+    
+    if(TMR3IF) {
+        TMR3IF = 0;
+        if(_motor_on) {
+            motor_step();
+        }
+        return;
+    }
 
 }
 
@@ -433,9 +441,7 @@ void main(void) {
     setupPorts();
     setupRealTimeClock();
     enableInterrupts();
-    
-    setupPwm();
-
+ 
     Lcd_Init();
     Lcd_Clear();
 
