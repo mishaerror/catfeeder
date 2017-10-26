@@ -11,16 +11,19 @@
 unsigned char _motor_step = 0;
 unsigned char _motor_on = 0;
 
-#define MOTOR_IN1 LATC2
-#define MOTOR_IN2 LATC3
-#define MOTOR_IN3 LATC4
-#define MOTOR_IN4 LATC5
+#define MOTOR_IN1 LATB3
+#define MOTOR_IN2 LATB4
+#define MOTOR_IN3 LATB5
+#define MOTOR_IN4 LATB6
 //mask
 unsigned char steps[] = {};
+
+unsigned short motor_speed;
 
 void motor_step();
 
 void motor_setup();
+
 
 #endif	/* STEPPER_MOTOR_H */
 

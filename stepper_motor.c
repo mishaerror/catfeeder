@@ -3,17 +3,28 @@
 
 #include "stepper_motor.h"
 
-#define TMR3_FULL_SPEED 0xF800
+#define TMR3_FULL_SPEED 0xFFE0
 #define TMR3_HALF_SPEED 0xF000
 #define TMR3_QTR_SPEED  0xE000
+
 void motor_setup() {
+    
+    TRISBbits.RB3 = 0;
+    TRISBbits.RB4 = 0;
+    TRISBbits.RB5 = 0;
+    TRISBbits.RB6 = 0;
+    
     TMR3CS = 1;// sync on timer1 (real time clock)
+    T3SYNC = 1;
     RD163 = 1; //16bit read of timer 3
     T3CKPS0 = 0;
     T3CKPS1 = 0;//prescaler 1:1
+    motor_speed = TMR3_FULL_SPEED;
     
-    TMR3 = TMR3_HALF_SPEED;
-    TMR3IE = 1;// enable timer 3 
+    TMR3 = motor_speed;
+    TMR3IE = 1;// enable timer 3 interrupt
+    TMR3IF = 0;
+    TMR3ON = 1;
 }
 
 void motor_step() {

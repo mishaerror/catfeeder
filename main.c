@@ -394,7 +394,7 @@ void interrupt handleInterrupt() {
             addOneSecond();
         }
         updateScreen();
-        return;
+        //return;
     }
 
     //handle button press events
@@ -429,9 +429,11 @@ void interrupt handleInterrupt() {
     
     if(TMR3IF) {
         TMR3IF = 0;
+        TMR3 = motor_speed;
         if(_motor_on) {
             motor_step();
         }
+
         return;
     }
 
@@ -447,7 +449,11 @@ void main(void) {
 
     display_state = ST_START_SCREEN;
     renderScreenTemplate(display_state);
+    
+    motor_setup();
+    _motor_on = 1;
     while (1) {
-
+        //motor_step();
+        //__delay_us(100);
     }
 }
