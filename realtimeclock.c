@@ -14,14 +14,14 @@ void setupRealTimeClock() {
     T1CONbits.TMR1ON = 1; //enable timer
 }
 
-void time_to_digit(char time, char* timestr) {
+void time_to_digit(unsigned char time, unsigned char* timestr) {
 
     if(time < 10){
         timestr[0] = '0';
     } else {
-        timestr[0] = (time /10 + 48);//ASCII numbers start at position 48
+        timestr[0] = (unsigned char)(time /10 + 48);//ASCII numbers start at position 48
     }
-    timestr[1] = (time%10 + 48);
+    timestr[1] = (unsigned char)(time%10 + 48);
 }
 
 void addOneSecond() {

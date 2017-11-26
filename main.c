@@ -35,10 +35,12 @@ typedef enum {
 } DISPLAY_STATE_t;
 
 typedef struct {
-    char hour;
-    char minute;
-    char quantity;
+    unsigned char hour;
+    unsigned char minute;
+    unsigned char quantity;
 } FEEDING_t;
+
+#define NOF_FEEDINGS = 4;
 
 FEEDING_t feedings[4] = {
     {0, 0, 0},
@@ -163,26 +165,67 @@ void edit_feed_minute_key_pressed() {
         display_state = ST_EDIT_FEED_QTY;
         tmp_num = feedings[feedIndex].quantity;
     } else if (key_pressed == KEY_PLUS) {
-        if (tmp_num == 59) {
+        if (tmp_num >= 59) {
             tmp_num = 0;
         } else {
-            tmp_num++;
+            tmp_num += 10;
         }
         display_state = ST_EDIT_FEED_MINUTE;
     } else if (key_pressed == KEY_MINUS) {
         if (tmp_num == 0) {
-            tmp_num = 59;
+            tmp_num = 50;
         } else {
-            tmp_num--;
+            tmp_num -= 10;
         }
         display_state = ST_EDIT_FEED_MINUTE;
     }
 }
 
+void write_eeprom(unsigned int addr, unsigned char byte) {
+    EEADR = addr;
+    EEDATA = byte;
+    EECON1bits.EEPGD = 0;//data memory
+    EECON1bits.CFGS = 0;//access EEPROM
+    EECON1bits.WREN = 1; //write
+    
+    //disable interrupts
+    INTCONbits.GIE = 0;
+    
+    EECON2 = 0x55;
+    EECON2 = 0x00;    
+    EECON1bits.WR = 1;
+    
+    //re-enable interrupts
+    INTCONbits.GIE = 0;
+    EECON1bits.WREN = 0; //write disabled
+}
+unsigned char read_eeprom(unsigned int addr) {
+    EEADR = addr;//memory address
+    EECON1bits.EEPGD = 0;//data memory
+    EECON1bits.CFGS = 0;//access EEPROM
+    EECON1bits.RD = 1; //read operation
+    
+    return EEDATA;
+}
+
+void write_feed_to_eeprom(unsigned char feedIndex) {
+    unsigned char feed_address = feedIndex * sizeof(feedings[feedIndex]);
+    write_eeprom(feed_address, feedings[feedIndex].hour);
+    write_eeprom(feed_address + 1, feedings[feedIndex].minute);
+    write_eeprom(feed_address + 2, feedings[feedIndex].quantity);
+}
+
+void read_feed_from_eeprom(char feedIndex) {
+    char feed_address = feedIndex * sizeof(feedings[feedIndex]);
+    feedings[feedIndex].hour = read_eeprom(feed_address);
+    feedings[feedIndex].minute = read_eeprom(feed_address + 1);
+    feedings[feedIndex].quantity = read_eeprom(feed_address + 2);
+}
 void edit_feed_qty_key_pressed() {
     if (key_pressed == KEY_ENTER) {
         feedings[feedIndex].quantity = tmp_num;
         display_state = ST_VIEW_FEED;
+        write_feed_to_eeprom(feedIndex);
     } else if (key_pressed == KEY_PLUS) {
         if (tmp_num == 99) {
             tmp_num = 0;
@@ -290,7 +333,7 @@ void write_loading_screen(unsigned char feed, unsigned char qty) {
     Qty: 02/25g
     ****************
  * */
-    char str_qty = " ";
+    char str_qty[] = " ";
     
     Lcd_Set_Cursor(0, 13);
     Lcd_Write_Char(feed);
@@ -302,7 +345,7 @@ void write_loading_screen(unsigned char feed, unsigned char qty) {
     Lcd_Write_String(str_qty);
 }
 
-void writeStartScreen(char * hour, char* minute, char tick, char* qty, char times) {
+void writeStartScreen(const char * hour, const char* minute, const char tick, const char* qty, const char times) {
     /*
      ****************
      Time: 12:44     
@@ -319,7 +362,7 @@ void writeStartScreen(char * hour, char* minute, char tick, char* qty, char time
     Lcd_Write_Char(times);
 }
 
-void write_feeding_screen(char feedNo, char* feedHour, char* feedMinute, char* feedQty) {
+void write_feeding_screen(char feedNo, const char* feedHour, const char* feedMinute, const char* feedQty) {
     /*
      ****************
      Feed 1: 05:30    
@@ -393,8 +436,9 @@ void interrupt handleInterrupt() {
             LATCbits.LATC4 ^= 1;//flip indicator light
             addOneSecond();
         }
+
         updateScreen();
-        //return;
+        return;
     }
 
     //handle button press events
@@ -438,20 +482,27 @@ void interrupt handleInterrupt() {
     }
 
 }
-
+void reload_feedings() {
+    unsigned char i;
+    for( i = 0; i < 4; i++) {
+        read_feed_from_eeprom(i);
+    }
+}
 void main(void) {
     setupPorts();
     setupRealTimeClock();
     enableInterrupts();
  
+    __delay_ms(500);
+
+    reload_feedings();
     Lcd_Init();
     Lcd_Clear();
-
     display_state = ST_START_SCREEN;
     renderScreenTemplate(display_state);
     
-    motor_setup();
-    _motor_on = 1;
+    //motor_setup();
+    //_motor_on = 1;
     while (1) {
         //motor_step();
         //__delay_us(100);

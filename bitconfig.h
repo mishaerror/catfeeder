@@ -4,13 +4,13 @@
 // 'C' source line config statements
 
 // CONFIG1H
-#pragma config OSC = INTIO67    // Oscillator Selection bits (Internal oscillator block, port function on RA6 and RA7)
+#pragma config OSC = RCIO6      // Oscillator Selection bits (External RC oscillator, port function on RA6)
 #pragma config FCMEN = OFF      // Fail-Safe Clock Monitor Enable bit (Fail-Safe Clock Monitor disabled)
 #pragma config IESO = OFF       // Internal/External Oscillator Switchover bit (Oscillator Switchover mode disabled)
 
 // CONFIG2L
 #pragma config PWRT = OFF       // Power-up Timer Enable bit (PWRT disabled)
-#pragma config BOREN = SBORDIS  // Brown-out Reset Enable bits (Brown-out Reset enabled in hardware only (SBOREN is disabled))
+#pragma config BOREN = OFF      // Brown-out Reset Enable bits (Brown-out Reset disabled in hardware and software)
 #pragma config BORV = 3         // Brown Out Reset Voltage bits (Minimum setting)
 
 // CONFIG2H
@@ -56,3 +56,5 @@
 // Use project enums instead of #define for ON and OFF.
 
 #include <xc.h>
+
+

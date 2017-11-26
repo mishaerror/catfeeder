@@ -5,8 +5,8 @@
 #define LCD_D6 LATAbits.LA2
 #define LCD_D7 LATAbits.LA3
 #define LCD_RS LATAbits.LA4 
-#define LCD_EN LATAbits.LA5
-#define LCD_RW LATAbits.LA6
+#define LCD_RW LATAbits.LA5
+#define LCD_EN LATAbits.LA6
 
 // commands
 #define LCD_CLEARDISPLAY 0x01
@@ -47,9 +47,9 @@
 #define LCD_5x10DOTS 0x04
 #define LCD_5x8DOTS 0x00
 
-void Lcd_Port(char a) {
+void Lcd_Port(unsigned char a) {
     LATA &= 0xF0;
-    LATA |= (a & 0x0F); 
+    LATA |= (unsigned char)(a & 0x0F); 
     __delay_us(2);
     
     LATA |= 0b00100000;//e=1
@@ -58,11 +58,11 @@ void Lcd_Port(char a) {
     __delay_us(1);
 }
 
-char lcd_display_control = 0;
-char lcd_display_function = 0;
-char lcd_display_mode = 0;
+unsigned char lcd_display_control = 0;
+unsigned char lcd_display_function = 0;
+unsigned char lcd_display_mode = 0;
 
-void Lcd_Write_Byte(unsigned char a, unsigned char rs) {
+void Lcd_Write_Byte(const unsigned char a, unsigned char rs) {
     unsigned char low, high;
 
     low = a & 0x0F;
@@ -79,15 +79,15 @@ void Lcd_Write_Byte(unsigned char a, unsigned char rs) {
     Lcd_Port(low);
     __delay_us(50); // commands need > 37us to settle
 }
-void Lcd_Cmd(unsigned char a) {
+void Lcd_Cmd(const unsigned char a) {
     Lcd_Write_Byte(a, 0);
 }
 
-void Lcd_Write_Char(char a) {
+void Lcd_Write_Char(const unsigned char a) {
     Lcd_Write_Byte(a, 1);
 }
 
-void Lcd_Write_String(char *a) {
+void Lcd_Write_String(const unsigned char *a) {
     int i;
     for (i = 0; a[i] != '\0'; i++){
         Lcd_Write_Char(a[i]);
@@ -105,13 +105,15 @@ void Lcd_Home() {
 }
 
 void Lcd_Set_Cursor(char row, char col) {
-    Lcd_Cmd(LCD_SETDDRAMADDR + row*LCD_ROW_WIDTH + col);
+    Lcd_Cmd((unsigned char)(LCD_SETDDRAMADDR + row*LCD_ROW_WIDTH + col));
     __delay_us(50);
 }
 
 void Lcd_Init() {
 
     LATA = 0;
+    
+    LCD_RW = 0;
 
     __delay_ms(100);
 

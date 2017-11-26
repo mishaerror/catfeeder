@@ -4,8 +4,8 @@
 #include "stepper_motor.h"
 
 #define TMR3_FULL_SPEED 0xFFE0
-#define TMR3_HALF_SPEED 0xF000
-#define TMR3_QTR_SPEED  0xE000
+#define TMR3_HALF_SPEED 0xFF70
+#define TMR3_QTR_SPEED  0xFF30
 
 void motor_setup() {
     
