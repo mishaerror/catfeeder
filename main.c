@@ -293,8 +293,10 @@ void enableInterrupts() {
 
 void setupPorts() {
     TRISA = 0;
+    TRISCbits.RC3 = 0;
     TRISCbits.RC4 = 0;
-    PORTCbits.RC4 = 1; //signal lamp
+    TRISCbits.RC5 = 0;
+    LATC5 = 1; //signal lamp
 }
 
 void renderScreenTemplate(DISPLAY_STATE_t state) {
@@ -433,7 +435,7 @@ void interrupt handleInterrupt() {
         tick++;//half second tick
         if (tick == 2) {//rollover
             tick = 0;
-            LATCbits.LATC4 ^= 1;//flip indicator light
+            LATC5 ^= 1;//flip indicator light
             addOneSecond();
         }
 
@@ -465,7 +467,6 @@ void interrupt handleInterrupt() {
         debounce_delay();
         if (PORTBbits.RB2) {
             key_pressed = KEY_MINUS;
-            PORTCbits.RC4 ^= 1;
         }
         updateScreen();
         return;
@@ -488,19 +489,19 @@ void reload_feedings() {
         read_feed_from_eeprom(i);
     }
 }
+
 void main(void) {
     setupPorts();
     setupRealTimeClock();
     enableInterrupts();
  
-    __delay_ms(500);
-
     reload_feedings();
+    
     Lcd_Init();
     Lcd_Clear();
     display_state = ST_START_SCREEN;
     renderScreenTemplate(display_state);
-    
+
     //motor_setup();
     //_motor_on = 1;
     while (1) {

@@ -1,4 +1,5 @@
 //LCD Functions Developed by electroSome
+#include "i2c.h"
 
 #define LCD_D4 LATAbits.LA0
 #define LCD_D5 LATAbits.LA1
@@ -47,6 +48,8 @@
 #define LCD_5x10DOTS 0x04
 #define LCD_5x8DOTS 0x00
 
+#define LCD_I2C 1
+#define LCD_I2C_ADDRESS 0x27
 void Lcd_Port(unsigned char a) {
     LATA &= 0xF0;
     LATA |= (unsigned char)(a & 0x0F); 
@@ -58,15 +61,68 @@ void Lcd_Port(unsigned char a) {
     __delay_us(1);
 }
 
+void Lcd_I2C_Transmit(unsigned char i2cData) {
+    I2C_Master_Start();
+    I2C_Master_Write((LCD_I2C_ADDRESS << 1)&0xFE);//7-bit address + 0 = write
+    I2C_Master_Write(i2cData);
+    I2C_Master_Stop();
+}
+
 unsigned char lcd_display_control = 0;
 unsigned char lcd_display_function = 0;
 unsigned char lcd_display_mode = 0;
 
 void Lcd_Write_Byte(const unsigned char a, unsigned char rs) {
-    unsigned char low, high;
+    unsigned char low, high, i2cmd = 0x00;
+    const unsigned char lcd_en_on = 0b00000100;
+    const unsigned char lcd_en_off = 0b11111011;
 
     low = a & 0x0F;
     high = (a & 0xF0) >> 4;
+    
+#ifdef LCD_I2C 
+//    P0 -------- RS
+//    P1 -------- R/W
+//    P2 -------- En
+//    P3 -------- LED on/off
+//    P4 -------- Data pin 4
+//    P5 -------- Data pin 5
+//    P6 -------- Data pin 6
+//    P7 -------- Data pin 7
+
+    i2cmd |= rs;//PO
+                //P1 is already 0, always write
+    i2cmd |= 0b0000;// P2, EN = 0
+    i2cmd |= 0b1000; // P3 - LED on
+    
+    
+    
+    //set high nibble on d4-d7
+    i2cmd |= (a & 0xF0);
+    Lcd_I2C_Transmit(i2cmd);
+    __delay_us(2);  
+    i2cmd |= lcd_en_on;//EN = 1
+    Lcd_I2C_Transmit(i2cmd);
+    __delay_us(5);
+    i2cmd &= lcd_en_off;//EN = 0
+    Lcd_I2C_Transmit(i2cmd);
+    __delay_us(1);
+
+    //set low data nibble
+    i2cmd &= 0x0F;
+    i2cmd |= ((a << 4) & 0xF0);
+    
+
+    Lcd_I2C_Transmit(i2cmd);
+    __delay_us(2);  
+    i2cmd |= lcd_en_on;//EN = 1
+    Lcd_I2C_Transmit(i2cmd);
+    __delay_us(5);
+    i2cmd &= lcd_en_off;//EN = 0
+    Lcd_I2C_Transmit(i2cmd);
+    __delay_us(1);
+
+#else
     
     if(rs == 0) {
         LATA &= 0b11101111;
@@ -77,6 +133,8 @@ void Lcd_Write_Byte(const unsigned char a, unsigned char rs) {
     Lcd_Port(high);
     __delay_us(1);
     Lcd_Port(low);
+#endif
+    
     __delay_us(50); // commands need > 37us to settle
 }
 void Lcd_Cmd(const unsigned char a) {
@@ -88,8 +146,7 @@ void Lcd_Write_Char(const unsigned char a) {
 }
 
 void Lcd_Write_String(const unsigned char *a) {
-    int i;
-    for (i = 0; a[i] != '\0'; i++){
+    for (int i = 0; a[i] != '\0'; i++){
         Lcd_Write_Char(a[i]);
     }
 }
@@ -110,9 +167,14 @@ void Lcd_Set_Cursor(char row, char col) {
 }
 
 void Lcd_Init() {
-
-    LATA = 0;
     
+#ifdef LCD_I2C
+    I2C_Master_Init(100000);
+#endif
+
+    
+    LATA = 0;
+
     LCD_RW = 0;
 
     __delay_ms(100);
