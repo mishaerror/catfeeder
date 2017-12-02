@@ -238,14 +238,14 @@ void edit_feed_minute_key_pressed() {
 }
 
 void write_feed_to_eeprom(unsigned char feedIndex) {
-    unsigned char feed_address = FEEDINGS_EEPROM_ADDR + feedIndex * sizeof(feedings[feedIndex]);
+    unsigned char feed_address = feedIndex * 3;
     write_eeprom(feed_address, feedings[feedIndex].hour);
     write_eeprom(feed_address + 1, feedings[feedIndex].minute);
     write_eeprom(feed_address + 2, feedings[feedIndex].quantity);
 }
 
 void read_feed_from_eeprom(char feedIndex) {
-    unsigned char feed_address = FEEDINGS_EEPROM_ADDR + feedIndex * 3;
+    unsigned char feed_address = feedIndex * 3;
     feedings[feedIndex].hour = read_eeprom(feed_address);
     if(feedings[feedIndex].hour > 23) {
        feedings[feedIndex].hour = 0;
