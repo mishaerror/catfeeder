@@ -1,8 +1,23 @@
 #include "realtimeclock.h"
+#include "utils.h"
+#define TIME_EEPROM_ADDR 12
+
+void read_time_from_eeprom() {
+    minutes = read_eeprom(TIME_EEPROM_ADDR);
+    if(minutes > 59) {
+        minutes = 0;
+    }
+    hours = read_eeprom(TIME_EEPROM_ADDR + 1);
+    if(hours > 23) {
+        hours = 0;
+    }
+}
 
 void setupRealTimeClock() {
     TMR1 = TMR1_RESET_VALUE;//32k ticks per second, interrupt on overflow
 
+    read_time_from_eeprom();
+    
     T1CONbits.RD16 = 0; //16-bit read
     T1CONbits.T1CKPS = 0; //prescaler 1:1
 
@@ -26,18 +41,23 @@ void time_to_digit(unsigned char time, unsigned char* timestr) {
 
 void addOneSecond() {
     seconds++;
+    ClrWdt();
+    
     if (seconds > 59) {
         seconds = 0;
         minutes++;
+        write_eeprom(TIME_EEPROM_ADDR, minutes);
     }
 
     if (minutes > 59) {
         minutes = 0;
         hours++;
+        write_eeprom(TIME_EEPROM_ADDR + 1, hours);
     }
 
     if (hours > 23) {
         hours = 0;
+        write_eeprom(TIME_EEPROM_ADDR + 1, hours);
     }
     
 }

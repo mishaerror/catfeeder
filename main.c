@@ -9,6 +9,7 @@
 #include "realtimeclock.h"
 #include "lcd.h"
 #include "stepper_motor.h"
+#include "utils.h"
 #include <stdio.h>
 
 #define debounce_delay() __delay_ms(50)
@@ -40,7 +41,8 @@ typedef struct {
     unsigned char quantity;
 } FEEDING_t;
 
-#define NOF_FEEDINGS = 4;
+#define NOF_FEEDINGS 4;
+#define FEEDINGS_EEPROM_ADDR 0;
 
 FEEDING_t feedings[4] = {
     {0, 0, 0},
@@ -181,42 +183,15 @@ void edit_feed_minute_key_pressed() {
     }
 }
 
-void write_eeprom(unsigned int addr, unsigned char byte) {
-    EEADR = addr;
-    EEDATA = byte;
-    EECON1bits.EEPGD = 0;//data memory
-    EECON1bits.CFGS = 0;//access EEPROM
-    EECON1bits.WREN = 1; //write
-    
-    //disable interrupts
-    INTCONbits.GIE = 0;
-    
-    EECON2 = 0x55;
-    EECON2 = 0x00;    
-    EECON1bits.WR = 1;
-    
-    //re-enable interrupts
-    INTCONbits.GIE = 0;
-    EECON1bits.WREN = 0; //write disabled
-}
-unsigned char read_eeprom(unsigned int addr) {
-    EEADR = addr;//memory address
-    EECON1bits.EEPGD = 0;//data memory
-    EECON1bits.CFGS = 0;//access EEPROM
-    EECON1bits.RD = 1; //read operation
-    
-    return EEDATA;
-}
-
 void write_feed_to_eeprom(unsigned char feedIndex) {
-    unsigned char feed_address = feedIndex * sizeof(feedings[feedIndex]);
+    unsigned char feed_address = FEEDINGS_EEPROM_ADDR + feedIndex * sizeof(feedings[feedIndex]);
     write_eeprom(feed_address, feedings[feedIndex].hour);
     write_eeprom(feed_address + 1, feedings[feedIndex].minute);
     write_eeprom(feed_address + 2, feedings[feedIndex].quantity);
 }
 
 void read_feed_from_eeprom(char feedIndex) {
-    char feed_address = feedIndex * sizeof(feedings[feedIndex]);
+    char feed_address = FEEDINGS_EEPROM_ADDR + feedIndex * sizeof(feedings[feedIndex]);
     feedings[feedIndex].hour = read_eeprom(feed_address);
     feedings[feedIndex].minute = read_eeprom(feed_address + 1);
     feedings[feedIndex].quantity = read_eeprom(feed_address + 2);
@@ -496,6 +471,8 @@ void main(void) {
     enableInterrupts();
  
     reload_feedings();
+    
+    ClrWdt();
     
     Lcd_Init();
     Lcd_Clear();
