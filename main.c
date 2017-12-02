@@ -12,7 +12,7 @@
 #include "utils.h"
 #include <stdio.h>
 
-#define debounce_delay() __delay_ms(50)
+#define debounce_delay() __delay_ms(0)
 
 #define BLANK_LINE "                "
 
@@ -61,17 +61,67 @@ unsigned char totalFeedings = 0;
 unsigned long weightSensorData = 0x0;
 
 DISPLAY_STATE_t display_state;
+void renderScreenTemplate(DISPLAY_STATE_t state) {
 
-void start_screen_key_pressed() {
+    switch (state) {
+        case ST_START_SCREEN:
+        case ST_EDIT_TIME_HOUR:
+        case ST_EDIT_TIME_MINUTE:
+            Lcd_Set_Cursor(0, 0);
+            Lcd_Write_String("Time:   :       ");
+            Lcd_Set_Cursor(1, 0);
+            Lcd_Write_String("Qty:    g   /day");
+            break;
+
+        case ST_VIEW_FEED:
+        case ST_EDIT_FEED_HOUR:
+        case ST_EDIT_FEED_MINUTE:
+        case ST_EDIT_FEED_QTY:
+            Lcd_Set_Cursor(0, 0);
+            Lcd_Write_String("Feed   :   :    ");
+            Lcd_Set_Cursor(1, 0);
+            Lcd_Write_String("Qty:       g    ");
+            break;
+        case ST_LOADING_FOOD:
+            Lcd_Set_Cursor(0, 0);
+            Lcd_Write_String("Loading feed    ");
+            Lcd_Set_Cursor(1, 0);
+            Lcd_Write_String("Qty:   /  g     ");
+            break;
+    }
+}
+
+unsigned char getTotalQty() {
+    char result = 0;
+    for(char i = 0; i < 4; i++) {
+        result += feedings[i].quantity;
+    }
+    
+    return result;
+}
+unsigned char getTotalFeedings() {
+    char result = 0;
+    for(char i = 0; i < 4; i++) {
+        if(feedings[i].quantity > 0) {
+            result ++;
+        }
+    }
+    
+    return result;
+}
+
+start_screen_key_pressed() {
     if (key_pressed == KEY_ENTER) {
         display_state = ST_EDIT_TIME_HOUR;
         tmp_num = hours;
     } else if (key_pressed == KEY_PLUS) {
         display_state = ST_VIEW_FEED;
         feedIndex = 0;
+        renderScreenTemplate(display_state);
     } else if (key_pressed == KEY_MINUS) {
         display_state = ST_VIEW_FEED;
         feedIndex = 3;
+        renderScreenTemplate(display_state);
     }
 }
 
@@ -125,14 +175,17 @@ void view_feed_key_pressed() {
     } else if (key_pressed == KEY_PLUS) {
         if (feedIndex == 3) {
             display_state = ST_START_SCREEN;
+            renderScreenTemplate(display_state);
         } else {
             feedIndex++;
             display_state = ST_VIEW_FEED;
         }
+        renderScreenTemplate(display_state);
     } else if (key_pressed == KEY_MINUS) {
         display_state = ST_VIEW_FEED;
         if (feedIndex == 0) {
             display_state = ST_START_SCREEN;
+            renderScreenTemplate(display_state);
         } else {
             feedIndex--;
             display_state = ST_VIEW_FEED;
@@ -144,6 +197,7 @@ void edit_feed_hour_key_pressed() {
     if (key_pressed == KEY_ENTER) {
         feedings[feedIndex].hour = tmp_num;
         display_state = ST_EDIT_FEED_MINUTE;
+        tmp_num = feedings[feedIndex].minute;
     } else if (key_pressed == KEY_PLUS) {
         if (tmp_num == 23) {
             tmp_num = 0;
@@ -191,16 +245,27 @@ void write_feed_to_eeprom(unsigned char feedIndex) {
 }
 
 void read_feed_from_eeprom(char feedIndex) {
-    char feed_address = FEEDINGS_EEPROM_ADDR + feedIndex * sizeof(feedings[feedIndex]);
+    unsigned char feed_address = FEEDINGS_EEPROM_ADDR + feedIndex * 3;
     feedings[feedIndex].hour = read_eeprom(feed_address);
+    if(feedings[feedIndex].hour > 23) {
+       feedings[feedIndex].hour = 0;
+    } 
     feedings[feedIndex].minute = read_eeprom(feed_address + 1);
+    if(feedings[feedIndex].minute > 59) {
+       feedings[feedIndex].minute = 0;
+    } 
     feedings[feedIndex].quantity = read_eeprom(feed_address + 2);
+    if(feedings[feedIndex].quantity > 99) {
+       feedings[feedIndex].quantity = 0;
+    } 
 }
 void edit_feed_qty_key_pressed() {
     if (key_pressed == KEY_ENTER) {
         feedings[feedIndex].quantity = tmp_num;
         display_state = ST_VIEW_FEED;
         write_feed_to_eeprom(feedIndex);
+        totalQty = getTotalQty();
+        totalFeedings = getTotalFeedings();
     } else if (key_pressed == KEY_PLUS) {
         if (tmp_num == 99) {
             tmp_num = 0;
@@ -256,14 +321,14 @@ void enableInterrupts() {
     INTCONbits.INT0IE = 1; //enter button
     INTCON3bits.INT1IE = 1; //plus button
     INTCON3bits.INT2IE = 1; //minus button
-    INTEDG0 = 1; //rising edge
-    INTEDG1 = 1;
-    INTEDG2 = 1;
+    INTEDG0 = 0; //falling edge
+    INTEDG1 = 0;
+    INTEDG2 = 0;
 
     ADCON1bits.PCFG = 0b0111; //RB ports are digital
 
-    INTCONbits.GIE = 1; //global interrupts
     INTCONbits.PEIE = 1; //perferal interrupts
+    INTCONbits.GIE = 1; //global interrupts
 }
 
 void setupPorts() {
@@ -274,34 +339,6 @@ void setupPorts() {
     LATC5 = 1; //signal lamp
 }
 
-void renderScreenTemplate(DISPLAY_STATE_t state) {
-    switch (state) {
-        case ST_START_SCREEN:
-        case ST_EDIT_TIME_HOUR:
-        case ST_EDIT_TIME_MINUTE:
-            Lcd_Set_Cursor(0, 0);
-            Lcd_Write_String("Time:   :       ");
-            Lcd_Set_Cursor(1, 0);
-            Lcd_Write_String("Qty:    g   /day");
-            break;
-
-        case ST_VIEW_FEED:
-        case ST_EDIT_FEED_HOUR:
-        case ST_EDIT_FEED_MINUTE:
-        case ST_EDIT_FEED_QTY:
-            Lcd_Set_Cursor(0, 0);
-            Lcd_Write_String("Feed   :   :    ");
-            Lcd_Set_Cursor(1, 0);
-            Lcd_Write_String("Qty:      g     ");
-            break;
-        case ST_LOADING_FOOD:
-            Lcd_Set_Cursor(0, 0);
-            Lcd_Write_String("Loading feed    ");
-            Lcd_Set_Cursor(1, 0);
-            Lcd_Write_String("Qty:   /  g     ");
-            break;
-    }
-}
 
 void write_loading_screen(unsigned char feed, unsigned char qty) {
 /*
@@ -358,8 +395,8 @@ void write_feeding_screen(char feedNo, const char* feedHour, const char* feedMin
 
 void updateScreen() {
     char feed_hour[] = "  ";
-    char feed_minute[] = " ";
-    char feed_qty[] = " ";
+    char feed_minute[] = "  ";
+    char feed_qty[] = "  ";
     time_to_digit(feedings[feedIndex].hour, feed_hour);
     time_to_digit(feedings[feedIndex].minute, feed_minute);
     time_to_digit(feedings[feedIndex].quantity, feed_qty);
@@ -368,7 +405,7 @@ void updateScreen() {
     time_to_digit(minutes, str_minutes);
     time_to_digit(totalQty, str_total_qty);
     time_to_digit(tmp_num, str_tmp_num);
-
+    
     switch (display_state) {
         case ST_START_SCREEN:
             writeStartScreen(str_hours, str_minutes, tick ? ':' : ' ',
@@ -388,13 +425,13 @@ void updateScreen() {
             break;
 
         case ST_EDIT_FEED_HOUR:
-            write_feeding_screen(feedIndex + 1 + 48, tick ? feed_hour : " ", feed_minute, feed_qty);
+            write_feeding_screen(feedIndex + 1 + 48, tick ? str_tmp_num : "__", feed_minute, feed_qty);
             break;
         case ST_EDIT_FEED_MINUTE:
-            write_feeding_screen(feedIndex + 1 + 48, feed_hour, tick ? feed_minute : " ", feed_qty);
+            write_feeding_screen(feedIndex + 1 + 48, feed_hour, tick ? str_tmp_num : "__", feed_qty);
             break;
         case ST_EDIT_FEED_QTY:
-            write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, tick ? feed_qty : " ");
+            write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, tick ? str_tmp_num : "__");
             break;
         case ST_LOADING_FOOD:
             write_loading_screen(feedIndex + 1 + 48, loaded_qty);
@@ -413,7 +450,6 @@ void interrupt handleInterrupt() {
             LATC5 ^= 1;//flip indicator light
             addOneSecond();
         }
-
         updateScreen();
         return;
     }
@@ -422,28 +458,31 @@ void interrupt handleInterrupt() {
     if (INT0IF) {
         INT0IF = 0;
         debounce_delay();
-        if (PORTBbits.RB0) {
-            key_pressed = KEY_ENTER;
+        if (!PORTBbits.RB0) {
+          key_pressed = KEY_ENTER;
+          process_key_input();
+          updateScreen();
         }
-        updateScreen();
         return;
     }
     if (INT1IF) {
         INT1IF = 0;
         debounce_delay();
-        if (PORTBbits.RB1) {
-            key_pressed = KEY_PLUS;
+        if (!PORTBbits.RB1) {
+          key_pressed = KEY_PLUS;
+          process_key_input();
+          updateScreen();
         }
-        updateScreen();
         return;
     }
     if (INT2IF) {
         INT1IF = 0;
         debounce_delay();
-        if (PORTBbits.RB2) {
-            key_pressed = KEY_MINUS;
+        if (!PORTBbits.RB2) {
+          key_pressed = KEY_MINUS;
+          process_key_input();
+          updateScreen();
         }
-        updateScreen();
         return;
     }
     
@@ -463,6 +502,8 @@ void reload_feedings() {
     for( i = 0; i < 4; i++) {
         read_feed_from_eeprom(i);
     }
+    totalQty = getTotalQty();
+    totalFeedings = getTotalFeedings();
 }
 
 void main(void) {
