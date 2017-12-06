@@ -8,20 +8,10 @@
  */
 #include "xcincludes.h"
 
-#define SERIAL_CLK_OUT PORTCbits.RC6
-#define SERIAL_DATA_IN PORTCbits.RC7
-#define GAIN 1 //x128
-
 void initHX711();
 
-long readSerialData();
+signed long getWeight();
 
-long read_average(int times);
+void turnOnHX711();
 
-long get_value(int times);
-
-void tare(int times);
-
-void power_down();
-
-void power_up();
+void turnOffHX711();

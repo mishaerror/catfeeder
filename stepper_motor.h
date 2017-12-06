@@ -8,6 +8,8 @@
 #ifndef STEPPER_MOTOR_H
 #define	STEPPER_MOTOR_H
 
+#include <xc.h>
+
 unsigned char _motor_step = 0;
 unsigned char _motor_on = 0;
 

@@ -4,15 +4,16 @@
  *
  * Created on September 18, 2017, 9:41 PM
  */
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "bitconfig.h"
 #include "xcincludes.h"
 #include "realtimeclock.h"
 #include "lcd.h"
 #include "stepper_motor.h"
 #include "utils.h"
-#include <stdio.h>
-
-#define debounce_delay() __delay_ms(0)
+#include "weightsensor.h"
 
 #define BLANK_LINE "                "
 
@@ -58,16 +59,16 @@ char str_total_qty[] = " 0";
 unsigned char loaded_qty = 0;
 unsigned char totalFeedings = 0;
 
-unsigned long weightSensorData = 0x0;
+long weight_tare;
 
 DISPLAY_STATE_t display_state;
 void renderScreenTemplate(DISPLAY_STATE_t state) {
-
+    Lcd_Clear();
+    Lcd_Home();
     switch (state) {
         case ST_START_SCREEN:
         case ST_EDIT_TIME_HOUR:
         case ST_EDIT_TIME_MINUTE:
-            Lcd_Set_Cursor(0, 0);
             Lcd_Write_String("Time:   :       ");
             Lcd_Set_Cursor(1, 0);
             Lcd_Write_String("Qty:    g   /day");
@@ -77,13 +78,11 @@ void renderScreenTemplate(DISPLAY_STATE_t state) {
         case ST_EDIT_FEED_HOUR:
         case ST_EDIT_FEED_MINUTE:
         case ST_EDIT_FEED_QTY:
-            Lcd_Set_Cursor(0, 0);
             Lcd_Write_String("Feed   :   :    ");
             Lcd_Set_Cursor(1, 0);
             Lcd_Write_String("Qty:       g    ");
             break;
         case ST_LOADING_FOOD:
-            Lcd_Set_Cursor(0, 0);
             Lcd_Write_String("Loading feed    ");
             Lcd_Set_Cursor(1, 0);
             Lcd_Write_String("Qty:   /  g     ");
@@ -110,7 +109,7 @@ unsigned char getTotalFeedings() {
     return result;
 }
 
-start_screen_key_pressed() {
+void start_screen_key_pressed() {
     if (key_pressed == KEY_ENTER) {
         display_state = ST_EDIT_TIME_HOUR;
         tmp_num = hours;
@@ -339,7 +338,6 @@ void setupPorts() {
     LATC5 = 1; //signal lamp
 }
 
-
 void write_loading_screen(unsigned char feed, unsigned char qty) {
 /*
     ****************
@@ -347,16 +345,25 @@ void write_loading_screen(unsigned char feed, unsigned char qty) {
     Qty: 02/25g
     ****************
  * */
-    char str_qty[] = " ";
+    char str_qty[] = "  ";
+
+    if(weight_tare == 0) {
+        weight_tare = getWeight();
+    }
+    long value = getWeight() - weight_tare;
+
+    
+    ltoa(str_qty, value, 10);
     
     Lcd_Set_Cursor(0, 13);
-    Lcd_Write_Char(feed);
+    Lcd_Write_Char('1');
     Lcd_Set_Cursor(1, 5);
-    time_to_digit(qty, str_qty);
+    //time_to_digit(qty, str_qty);
+    //Lcd_Write_String(str_qty);
     Lcd_Write_String(str_qty);
-    Lcd_Set_Cursor(1, 8);
-    time_to_digit(feedings[feed].quantity, str_qty);
-    Lcd_Write_String(str_qty);
+    //Lcd_Set_Cursor(1, 8);
+    //time_to_digit(feedings[0].quantity, str_qty);
+    //Lcd_Write_String(str_qty);
 }
 
 void writeStartScreen(const char * hour, const char* minute, const char tick, const char* qty, const char times) {
@@ -434,7 +441,8 @@ void updateScreen() {
             write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, tick ? str_tmp_num : "__");
             break;
         case ST_LOADING_FOOD:
-            write_loading_screen(feedIndex + 1 + 48, loaded_qty);
+            write_loading_screen(0, 0);
+            break;
     }
 }
 
@@ -457,7 +465,6 @@ void interrupt handleInterrupt() {
     //handle button press events
     if (INT0IF) {
         INT0IF = 0;
-        debounce_delay();
         if (!PORTBbits.RB0) {
           key_pressed = KEY_ENTER;
           process_key_input();
@@ -467,7 +474,6 @@ void interrupt handleInterrupt() {
     }
     if (INT1IF) {
         INT1IF = 0;
-        debounce_delay();
         if (!PORTBbits.RB1) {
           key_pressed = KEY_PLUS;
           process_key_input();
@@ -477,7 +483,6 @@ void interrupt handleInterrupt() {
     }
     if (INT2IF) {
         INT1IF = 0;
-        debounce_delay();
         if (!PORTBbits.RB2) {
           key_pressed = KEY_MINUS;
           process_key_input();
@@ -492,10 +497,8 @@ void interrupt handleInterrupt() {
         if(_motor_on) {
             motor_step();
         }
-
         return;
     }
-
 }
 void reload_feedings() {
     unsigned char i;
@@ -510,7 +513,8 @@ void main(void) {
     setupPorts();
     setupRealTimeClock();
     enableInterrupts();
- 
+    initHX711();
+    
     reload_feedings();
     
     ClrWdt();
@@ -519,7 +523,7 @@ void main(void) {
     Lcd_Clear();
     display_state = ST_START_SCREEN;
     renderScreenTemplate(display_state);
-
+    
     //motor_setup();
     //_motor_on = 1;
     while (1) {
@@ -527,3 +531,4 @@ void main(void) {
         //__delay_us(100);
     }
 }
+ 

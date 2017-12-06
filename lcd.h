@@ -1,6 +1,8 @@
 //LCD Functions Developed by electroSome
 #include "i2c.h"
 
+#include <xc.h>
+
 #define LCD_D4 LATAbits.LA0
 #define LCD_D5 LATAbits.LA1
 #define LCD_D6 LATAbits.LA2
@@ -146,7 +148,8 @@ void Lcd_Write_Char(const unsigned char a) {
 }
 
 void Lcd_Write_String(const unsigned char *a) {
-    for (int i = 0; a[i] != '\0'; i++){
+    for (int i = 0; a[i] != 0; i++){
+        char c = a[i];
         Lcd_Write_Char(a[i]);
     }
 }

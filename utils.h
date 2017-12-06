@@ -4,10 +4,11 @@
  *
  * Created on December 2, 2017, 4:52 PM
  */
-#include <xc.h>
 
 #ifndef UTILS_H
 #define	UTILS_H
+
+#include <xc.h>
 
 #ifdef	__cplusplus
 extern "C" {

@@ -12,65 +12,63 @@
  *
  * Created on September 22, 2017, 8:37 PM
  */
-#include "xcincludes.h"
 #include "weightsensor.h"
 
-long weightOffset = 0;
+#define SCALE_FACTOR 2100
+#define NOF_SAMPLES 8
+
+#define HX_SCK LATCbits.LATC6
+#define HX_DT PORTCbits.RC7
 
 void initHX711() {
     TRISCbits.RC6 = 0; //clock for serial data
     TRISCbits.RC7 = 1; //input for serial data
-    weightOffset = 0;
+    HX_SCK = 1;
 }
 
-long readSerialData() {
-    unsigned long serialData = 0x0;
+void turnOnHX711() {
+    HX_SCK = 0;
+}
 
-    SERIAL_DATA_IN = 1;
-    SERIAL_CLK_OUT = 0;
-    serialData = 0;
-    while (SERIAL_DATA_IN);
-    for (unsigned char i = 0; i < 24; i++) {
-        SERIAL_CLK_OUT = 1;
-        serialData = serialData << 1;
-        SERIAL_CLK_OUT = 0;
-        if (SERIAL_DATA_IN) serialData++;
+void turnOffHX711() {
+    HX_SCK = 1;
+}
+
+long getWeight() {
+    signed long data = 0;
+    signed long dataSum = 0x00;
+
+    turnOnHX711();
+    
+    while(HX_DT == 1);  // wait HX711 ready
+    // dummy conversion next : channel A@128
+    for(char i=0; i<25; i++){
+        HX_SCK = 1;
+        HX_SCK = 0;
     }
 
-    for (unsigned short i = 0; i < GAIN; i++) {
-        SERIAL_CLK_OUT = 1;
-        SERIAL_CLK_OUT = 0;
+    for(char averaging  = 0; averaging < NOF_SAMPLES; averaging++) {
+        while(HX_DT == 1);  // wait HX711 ready
+        data = 0;
+        for(char i=0; i<24; i++){
+            data = data << 1;
+            HX_SCK = 1;
+            HX_SCK = 0;
+            if (HX_DT) data += 1;
+        }
+        HX_SCK = 1;
+        HX_SCK = 0;         // next conversion channel A:128
+        //pad with sign
+        if(data & 0x800000) {
+            data |= 0xFF000000;
+        }
+        data = data ^ 0x80000000;
+        
+        dataSum += data;
     }
+    
+    turnOffHX711();
 
-    SERIAL_CLK_OUT = 1;
-    serialData = serialData ^ 0x800000;
-    SERIAL_CLK_OUT = 0;
-    return (serialData);
-}
-
-long read_average(int times) {
-    long sum = 0;
-    for (int i = 0; i < times; i++) {
-        sum += readSerialData();
-    }
-    return sum / times;
-}
-
-long get_value(int times) {
-	return read_average(times) - weightOffset;
-}
-
-void tare(int times) {
-	long sum = read_average(times);
-	weightOffset = sum;
-}
-
-void power_down() {
-    SERIAL_CLK_OUT = 0;
-    SERIAL_CLK_OUT = 1;
-}
-
-void power_up() {
-    SERIAL_CLK_OUT = 0;
+    return (dataSum / NOF_SAMPLES)/SCALE_FACTOR;
 }
 

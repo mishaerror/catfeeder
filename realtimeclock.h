@@ -4,7 +4,7 @@
  *
  * Created on September 22, 2017, 8:36 PM
  */
-#include "xcincludes.h"
+#include <xc.h>
 
 #define TMR1_RESET_VALUE 0xC000
 
