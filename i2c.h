@@ -19,7 +19,7 @@ void i2cInit(const unsigned long c);
 
 void i2cWait();
 
-void I2cStart();
+void i2cStart();
 
 void i2cRepeatedStart();
 

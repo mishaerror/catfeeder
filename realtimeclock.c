@@ -16,6 +16,11 @@ void readTimeFromEeprom() {
     }
 }
 
+void writeTimeToEeprom() {
+    eepromWrite(TIME_EEPROM_ADDR, minutes);
+    eepromWrite(TIME_EEPROM_ADDR + 1, hours);
+}
+
 void setupRealTimeClock() {
     TMR1 = TMR1_RESET_VALUE;//32k ticks per second, interrupt on overflow
 
@@ -45,7 +50,7 @@ void addOneSecond() {
     if (minutes > 59) {
         minutes = 0;
         hours++;
-        eepromWrite(TIME_EEPROM_ADDR + 1, hours);
+        eepromWrite(TIME_EEPROM_ADDR, minutes);
     }
 
     if (hours > 23) {

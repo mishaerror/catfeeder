@@ -16,26 +16,22 @@ void i2cWait()
   while ((SSPSTAT & 0x04) || (SSPCON2 & 0x1F)); //Transmit is in progress
 }
 
-void I2cStart()
-{
+void i2cStart(){
   i2cWait();    
   SEN = 1;             //Initiate start condition
 }
 
-void i2cRepeatedStart()
-{
+void i2cRepeatedStart() {
   i2cWait();
   RSEN = 1;           //Initiate repeated start condition
 }
 
-void i2cStop()
-{
+void i2cStop() {
   i2cWait();
   PEN = 1;           //Initiate stop condition
 }
 
-void i2cWrite(unsigned d)
-{
+void i2cWrite(unsigned d) {
   i2cWait();
   SSPBUF = d;         //Write data to SSPBUF
 }

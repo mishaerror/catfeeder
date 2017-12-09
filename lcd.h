@@ -2,15 +2,15 @@
 
 #define LCD_I2C
 
-void LcdWriteChar(const unsigned char a);
+void lcdWriteChar(const unsigned char a);
 
-void LcdWriteString(const unsigned char *a);
+void lcdWriteString(const unsigned char *a);
 
-void LcdClear();
+void lcdClear();
 
-void LcdHome();
+void lcdHome();
 
-void LcdSetCursor(char row, char col);
+void lcdSetCursor(char row, char col);
 
-void LcdInit();
+void lcdInit();
 

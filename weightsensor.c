@@ -36,8 +36,8 @@ void turnOffHX711() {
 }
 
 long getWeight() {
-    signed long data = 0;
-    signed long dataSum = 0x00;
+    long data = 0;
+    long dataSum = 0x00;
 
     turnOnHX711();
     

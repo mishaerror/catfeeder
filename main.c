@@ -4,8 +4,6 @@
  *
  * Created on September 18, 2017, 9:41 PM
  */
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "bitconfig.h"
 #include "xcincludes.h"
@@ -61,32 +59,36 @@ unsigned char totalFeedings = 0;
 
 long weight_tare;
 
+char str_seconds[] = "00";
+char str_minutes[] = "00";
+char str_hours[] = "00";
+
 DISPLAY_STATE_t display_state;
 
 void renderScreenTemplate(DISPLAY_STATE_t state) {
-    LcdClear();
-    LcdHome();
+    lcdClear();
+    lcdHome();
     switch (state) {
         case ST_START_SCREEN:
         case ST_EDIT_TIME_HOUR:
         case ST_EDIT_TIME_MINUTE:
-            LcdWriteString("Time:   :       ");
-            LcdSetCursor(1, 0);
-            LcdWriteString("Qty:    g   /day");
+            lcdWriteString("Time:   :       ");
+            lcdSetCursor(1, 0);
+            lcdWriteString("Qty:    g   /day");
             break;
 
         case ST_VIEW_FEED:
         case ST_EDIT_FEED_HOUR:
         case ST_EDIT_FEED_MINUTE:
         case ST_EDIT_FEED_QTY:
-            LcdWriteString("Feed   :   :    ");
-            LcdSetCursor(1, 0);
-            LcdWriteString("Qty:       g    ");
+            lcdWriteString("Feed   :   :    ");
+            lcdSetCursor(1, 0);
+            lcdWriteString("Qty:       g    ");
             break;
         case ST_LOADING_FOOD:
-            LcdWriteString("Loading feed    ");
-            LcdSetCursor(1, 0);
-            LcdWriteString("Qty:   /  g     ");
+            lcdWriteString("Loading feed    ");
+            lcdSetCursor(1, 0);
+            lcdWriteString("Qty:   /  g     ");
             break;
     }
 }
@@ -129,6 +131,7 @@ void edit_hour_key_pressed() {
     if (key_pressed == KEY_ENTER) {
         display_state = ST_EDIT_TIME_MINUTE;
         hours = tmp_num;
+        writeTimeToEeprom();
         tmp_num = minutes;
     } else if (key_pressed == KEY_PLUS) {
         display_state = ST_EDIT_TIME_HOUR;
@@ -151,6 +154,8 @@ void edit_minute_key_pressed() {
     if (key_pressed == KEY_ENTER) {
         display_state = ST_START_SCREEN;
         minutes = tmp_num;
+        writeTimeToEeprom();
+        seconds = 0;
     } else if (key_pressed == KEY_PLUS) {
         display_state = ST_EDIT_TIME_MINUTE;
         if (tmp_num == 59) {
@@ -352,22 +357,19 @@ void write_loading_screen(unsigned char feed, unsigned char qty) {
         weight_tare = getWeight();
     }
     long value = getWeight() - weight_tare;
-
     
-    ltoa(str_qty, value, 10);
-    
-    LcdSetCursor(0, 13);
-    LcdWriteChar('1');
-    LcdSetCursor(1, 5);
+    lcdSetCursor(0, 13);
+    lcdWriteChar('1');
+    lcdSetCursor(1, 5);
     //timeToDigit(qty, str_qty);
-    //LcdWriteString(str_qty);
+    //lcdWriteString(str_qty);
     if(value < 10){
-        LcdWriteChar('0');
+        lcdWriteChar('0');
     }
-    LcdWriteString(str_qty);
-    //LcdSetCursor(1, 8);
+    lcdWriteString(str_qty);
+    //lcdSetCursor(1, 8);
     //timeToDigit(feedings[0].quantity, str_qty);
-    //LcdWriteString(str_qty);
+    //lcdWriteString(str_qty);
 }
 
 void writeStartScreen(const char * hour, const char* minute, const char tick, const char* qty, const char times) {
@@ -377,14 +379,14 @@ void writeStartScreen(const char * hour, const char* minute, const char tick, co
      Qty:  40g  2/day
      ****************
      */
-    LcdSetCursor(0, 6);
-    LcdWriteString(hour);
-    LcdWriteChar(tick);
-    LcdWriteString(minute);
-    LcdSetCursor(1, 6);
-    LcdWriteString(qty);
-    LcdSetCursor(1, 11);
-    LcdWriteChar(times);
+    lcdSetCursor(0, 6);
+    lcdWriteString(hour);
+    lcdWriteChar(tick);
+    lcdWriteString(minute);
+    lcdSetCursor(1, 6);
+    lcdWriteString(qty);
+    lcdSetCursor(1, 11);
+    lcdWriteChar(times);
 }
 
 void write_feeding_screen(char feedNo, const char* feedHour, const char* feedMinute, const char* feedQty) {
@@ -394,14 +396,14 @@ void write_feeding_screen(char feedNo, const char* feedHour, const char* feedMin
      Qty:    20g
      ****************
      */
-    LcdSetCursor(0, 5);
-    LcdWriteChar(feedNo);
-    LcdSetCursor(0, 8);
-    LcdWriteString(feedHour);
-    LcdSetCursor(0, 11);
-    LcdWriteString(feedMinute);
-    LcdSetCursor(1, 9);
-    LcdWriteString(feedQty);
+    lcdSetCursor(0, 5);
+    lcdWriteChar(feedNo);
+    lcdSetCursor(0, 8);
+    lcdWriteString(feedHour);
+    lcdSetCursor(0, 11);
+    lcdWriteString(feedMinute);
+    lcdSetCursor(1, 9);
+    lcdWriteString(feedQty);
 }
 
 void updateScreen() {
@@ -497,10 +499,9 @@ void interrupt handleInterrupt() {
     
     if(TMR3IF) {
         TMR3IF = 0;
-        TMR3 = motor_speed;
-        if(_motor_on) {
-            motor_step();
-        }
+        
+        motorStep();
+        
         return;
     }
 }
@@ -514,24 +515,26 @@ void reload_feedings() {
 }
 
 void main(void) {
-    setupPorts();
-    setupRealTimeClock();
-    enableInterrupts();
-    initHX711();
-    
     reload_feedings();
-    
-    ClrWdt();
-    
-    LcdInit();
-    LcdClear();
+    setupPorts();
+
+    //after ports are initiated, set up lcd and render initial screen
+    lcdInit();
+    lcdClear();
+
     display_state = ST_START_SCREEN;
     renderScreenTemplate(display_state);
+
+    //enable weight sensor and clock
+    initHX711();
+    setupRealTimeClock();
+    //interrupts will enable clock mechanism
+    enableInterrupts();
     
     //motorSetup();
     //_motor_on = 1;
     while (1) {
-        //motor_step();
+        //motorStep();
         //__delay_us(100);
     }
 }

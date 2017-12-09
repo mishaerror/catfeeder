@@ -11,13 +11,13 @@ unsigned char seconds = 0;
 unsigned char minutes = 0;
 unsigned char hours = 0;
 
-char str_seconds[] = "00";
-char str_minutes[] = "00";
-char str_hours[] = "00";
-
 //tick is updated on half-second
 char tick = 0;
 
 void setupRealTimeClock();
 
 void addOneSecond();
+
+void writeTimeToEeprom();
+
+void readTimeFromEeprom();

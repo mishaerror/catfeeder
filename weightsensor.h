@@ -9,7 +9,7 @@
 
 void initHX711();
 
-signed long getWeight();
+long getWeight();
 
 void turnOnHX711();
 

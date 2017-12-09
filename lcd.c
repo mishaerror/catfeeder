@@ -14,7 +14,7 @@
 #endif
 
 // commands
-#define LcdClearDISPLAY 0x01
+#define LCD_CLEAR_DISPLAY 0x01
 #define LCD_RETURNHOME 0x02
 #define LCD_ENTRYMODESET 0x04
 #define LCD_DISPLAYCONTROL 0x08
@@ -70,26 +70,26 @@ void Lcd_Port(unsigned char a) {
 }
 #else
 
-void Lcd_I2C_Transmit(unsigned char i2cData) {
-    I2cStart();
+void lcdI2cTransmit(unsigned char i2cData) {
+    i2cStart();
     i2cWrite((LCD_I2C_ADDRESS << 1)&0xFE); //7-bit address + 0 = write
     i2cWrite(i2cData);
     i2cStop();
 }
 
-void Lcd_I2C_Command(unsigned char cmd) {
-    Lcd_I2C_Transmit(cmd);
+void lcdI2cCommand(unsigned char cmd) {
+    lcdI2cTransmit(cmd);
     __delay_us(2);
     cmd |= LCD_I2C_EN_ON; //EN = 1
-    Lcd_I2C_Transmit(cmd);
+    lcdI2cTransmit(cmd);
     __delay_us(5);
     cmd &= LCD_I2C_EN_OFF; //EN = 0
-    Lcd_I2C_Transmit(cmd);
+    lcdI2cTransmit(cmd);
     __delay_us(1);
 }
 #endif
 
-void Lcd_Write_Byte(const unsigned char a, unsigned char rs) {
+void lcdWriteByte(const unsigned char a, unsigned char rs) {
     unsigned char low, high, i2cmd = 0x00;
 
     low = a & 0x0F;
@@ -113,13 +113,13 @@ void Lcd_Write_Byte(const unsigned char a, unsigned char rs) {
     //set high nibble on d4-d7
     i2cmd |= (a & 0xF0);
     
-    Lcd_I2C_Command(i2cmd);
+    lcdI2cCommand(i2cmd);
 
     //set low data nibble
     i2cmd &= 0x0F;
     i2cmd |= ((a << 4) & 0xF0);
 
-    Lcd_I2C_Command(i2cmd);
+    lcdI2cCommand(i2cmd);
 
 
 #else
@@ -138,41 +138,41 @@ void Lcd_Write_Byte(const unsigned char a, unsigned char rs) {
     __delay_us(50); // commands need > 37us to settle
 }
 
-void Lcd_Cmd(const unsigned char a) {
-    Lcd_Write_Byte(a, 0);
+void lcdCmd(const unsigned char a) {
+    lcdWriteByte(a, 0);
 }
 
-void LcdWriteChar(const unsigned char a) {
-    Lcd_Write_Byte(a, 1);
+void lcdWriteChar(const unsigned char a) {
+    lcdWriteByte(a, 1);
 }
 
-void LcdWriteString(const unsigned char *a) {
+void lcdWriteString(const unsigned char *a) {
     for (int i = 0; a[i] != 0; i++) {
         char c = a[i];
-        LcdWriteChar(a[i]);
+        lcdWriteChar(a[i]);
     }
 }
 
-void LcdClear() {
-    Lcd_Cmd(LcdClearDISPLAY);
+void lcdClear() {
+    lcdCmd(LCD_CLEAR_DISPLAY);
     __delay_ms(2);
 }
 
-void LcdHome() {
-    Lcd_Cmd(LCD_RETURNHOME);
+void lcdHome() {
+    lcdCmd(LCD_RETURNHOME);
     __delay_ms(2);
 }
 
-void LcdSetCursor(char row, char col) {
-    Lcd_Cmd((unsigned char) (LCD_SETDDRAMADDR + row * LCD_ROW_WIDTH + col));
+void lcdSetCursor(char row, char col) {
+    lcdCmd((unsigned char) (LCD_SETDDRAMADDR + row * LCD_ROW_WIDTH + col));
     __delay_us(50);
 }
 
-void LcdInit() {
+void lcdInit() {
 
-    unsigned char lcd_display_control = 0;
-    unsigned char lcd_display_function = 0;
-    unsigned char lcd_display_mode = 0;
+    char lcd_display_control = 0;
+    char lcd_display_function = 0;
+    char lcd_display_mode = 0;
 
 #ifdef LCD_I2C
     i2cInit(100000);
@@ -183,26 +183,26 @@ void LcdInit() {
 
     __delay_ms(100);
 
-    Lcd_Cmd(0x03);
+    lcdCmd(0x03);
     __delay_ms(5);
-    Lcd_Cmd(0x03);
+    lcdCmd(0x03);
     __delay_ms(5);
-    Lcd_Cmd(0x03);
+    lcdCmd(0x03);
     __delay_us(150);
-    Lcd_Cmd(0x02);
+    lcdCmd(0x02);
     __delay_us(150);
     /////////////////////////////////////////////////////
 
     lcd_display_function = LCD_2LINE | LCD_5x8DOTS;
-    Lcd_Cmd(LCD_FUNCTIONSET | lcd_display_function);
+    lcdCmd(LCD_FUNCTIONSET | lcd_display_function);
     __delay_ms(5);
 
     lcd_display_control = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
-    Lcd_Cmd(LCD_DISPLAYCONTROL | lcd_display_control);
+    lcdCmd(LCD_DISPLAYCONTROL | lcd_display_control);
     __delay_ms(5);
 
     lcd_display_mode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
-    Lcd_Cmd(LCD_ENTRYMODESET | lcd_display_mode);
+    lcdCmd(LCD_ENTRYMODESET | lcd_display_mode);
     __delay_ms(5);
 
 }

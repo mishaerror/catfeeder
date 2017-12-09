@@ -5,6 +5,15 @@
 #define TMR3_HALF_SPEED 0xFF70
 #define TMR3_QTR_SPEED  0xFF30
 
+#define MOTOR_IN1 LATB3
+#define MOTOR_IN2 LATB4
+#define MOTOR_IN3 LATB5
+#define MOTOR_IN4 LATB6
+
+unsigned char _motor_step = 0;
+unsigned char _motor_on = 0;
+unsigned short _motor_speed;
+
 void motorSetup() {
     
     TRISBbits.RB3 = 0;
@@ -17,15 +26,19 @@ void motorSetup() {
     RD163 = 1; //16bit read of timer 3
     T3CKPS0 = 0;
     T3CKPS1 = 0;//prescaler 1:1
-    motor_speed = TMR3_FULL_SPEED;
+    _motor_speed = TMR3_FULL_SPEED;
     
-    TMR3 = motor_speed;
+    TMR3 = _motor_speed;
     TMR3IE = 1;// enable timer 3 interrupt
     TMR3IF = 0;
     TMR3ON = 1;
 }
 
-void motor_step() {
+void motorStep() {
+    if(!_motor_on) {
+        return;
+    }
+    TMR3 = _motor_speed;
     _motor_step++;
     if(_motor_step > 7) {
         _motor_step = 0;
