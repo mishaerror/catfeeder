@@ -13,6 +13,7 @@
  * Created on September 22, 2017, 8:37 PM
  */
 #include "weightsensor.h"
+#include "xcincludes.h"
 
 #define SCALE_FACTOR 2100
 #define NOF_SAMPLES 8

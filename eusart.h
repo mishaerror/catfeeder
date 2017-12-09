@@ -8,7 +8,6 @@
 #ifndef EUSART_H
 #define	EUSART_H
 
-#include <xc.h>
 #include "xcincludes.h"
 
 #ifdef	__cplusplus

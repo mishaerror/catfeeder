@@ -8,7 +8,7 @@
 #ifndef STEPPER_MOTOR_H
 #define	STEPPER_MOTOR_H
 
-#include <xc.h>
+#include "xcincludes.h"
 
 unsigned char _motor_step = 0;
 unsigned char _motor_on = 0;
@@ -22,7 +22,7 @@ unsigned short motor_speed;
 
 void motor_step();
 
-void motor_setup();
+void motorSetup();
 
 
 #endif	/* STEPPER_MOTOR_H */

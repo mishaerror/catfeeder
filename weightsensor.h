@@ -6,7 +6,6 @@
  *
  * Created on September 22, 2017, 8:37 PM
  */
-#include "xcincludes.h"
 
 void initHX711();
 

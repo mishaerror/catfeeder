@@ -14,8 +14,9 @@
 extern "C" {
 #endif
 
-void write_eeprom(unsigned int addr, unsigned char byte);
-unsigned char read_eeprom(unsigned int addr);
+void eepromWrite(unsigned int addr, unsigned char byte);
+unsigned char eepromRead(unsigned int addr);
+void timeToDigit(char time, char* timestr);
 
 #ifdef	__cplusplus
 }

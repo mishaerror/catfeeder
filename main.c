@@ -62,30 +62,31 @@ unsigned char totalFeedings = 0;
 long weight_tare;
 
 DISPLAY_STATE_t display_state;
+
 void renderScreenTemplate(DISPLAY_STATE_t state) {
-    Lcd_Clear();
-    Lcd_Home();
+    LcdClear();
+    LcdHome();
     switch (state) {
         case ST_START_SCREEN:
         case ST_EDIT_TIME_HOUR:
         case ST_EDIT_TIME_MINUTE:
-            Lcd_Write_String("Time:   :       ");
-            Lcd_Set_Cursor(1, 0);
-            Lcd_Write_String("Qty:    g   /day");
+            LcdWriteString("Time:   :       ");
+            LcdSetCursor(1, 0);
+            LcdWriteString("Qty:    g   /day");
             break;
 
         case ST_VIEW_FEED:
         case ST_EDIT_FEED_HOUR:
         case ST_EDIT_FEED_MINUTE:
         case ST_EDIT_FEED_QTY:
-            Lcd_Write_String("Feed   :   :    ");
-            Lcd_Set_Cursor(1, 0);
-            Lcd_Write_String("Qty:       g    ");
+            LcdWriteString("Feed   :   :    ");
+            LcdSetCursor(1, 0);
+            LcdWriteString("Qty:       g    ");
             break;
         case ST_LOADING_FOOD:
-            Lcd_Write_String("Loading feed    ");
-            Lcd_Set_Cursor(1, 0);
-            Lcd_Write_String("Qty:   /  g     ");
+            LcdWriteString("Loading feed    ");
+            LcdSetCursor(1, 0);
+            LcdWriteString("Qty:   /  g     ");
             break;
     }
 }
@@ -238,22 +239,22 @@ void edit_feed_minute_key_pressed() {
 
 void write_feed_to_eeprom(unsigned char feedIndex) {
     unsigned char feed_address = feedIndex * 3;
-    write_eeprom(feed_address, feedings[feedIndex].hour);
-    write_eeprom(feed_address + 1, feedings[feedIndex].minute);
-    write_eeprom(feed_address + 2, feedings[feedIndex].quantity);
+    eepromWrite(feed_address, feedings[feedIndex].hour);
+    eepromWrite(feed_address + 1, feedings[feedIndex].minute);
+    eepromWrite(feed_address + 2, feedings[feedIndex].quantity);
 }
 
 void read_feed_from_eeprom(char feedIndex) {
     unsigned char feed_address = feedIndex * 3;
-    feedings[feedIndex].hour = read_eeprom(feed_address);
+    feedings[feedIndex].hour = eepromRead(feed_address);
     if(feedings[feedIndex].hour > 23) {
        feedings[feedIndex].hour = 0;
     } 
-    feedings[feedIndex].minute = read_eeprom(feed_address + 1);
+    feedings[feedIndex].minute = eepromRead(feed_address + 1);
     if(feedings[feedIndex].minute > 59) {
        feedings[feedIndex].minute = 0;
     } 
-    feedings[feedIndex].quantity = read_eeprom(feed_address + 2);
+    feedings[feedIndex].quantity = eepromRead(feed_address + 2);
     if(feedings[feedIndex].quantity > 99) {
        feedings[feedIndex].quantity = 0;
     } 
@@ -355,15 +356,18 @@ void write_loading_screen(unsigned char feed, unsigned char qty) {
     
     ltoa(str_qty, value, 10);
     
-    Lcd_Set_Cursor(0, 13);
-    Lcd_Write_Char('1');
-    Lcd_Set_Cursor(1, 5);
-    //time_to_digit(qty, str_qty);
-    //Lcd_Write_String(str_qty);
-    Lcd_Write_String(str_qty);
-    //Lcd_Set_Cursor(1, 8);
-    //time_to_digit(feedings[0].quantity, str_qty);
-    //Lcd_Write_String(str_qty);
+    LcdSetCursor(0, 13);
+    LcdWriteChar('1');
+    LcdSetCursor(1, 5);
+    //timeToDigit(qty, str_qty);
+    //LcdWriteString(str_qty);
+    if(value < 10){
+        LcdWriteChar('0');
+    }
+    LcdWriteString(str_qty);
+    //LcdSetCursor(1, 8);
+    //timeToDigit(feedings[0].quantity, str_qty);
+    //LcdWriteString(str_qty);
 }
 
 void writeStartScreen(const char * hour, const char* minute, const char tick, const char* qty, const char times) {
@@ -373,14 +377,14 @@ void writeStartScreen(const char * hour, const char* minute, const char tick, co
      Qty:  40g  2/day
      ****************
      */
-    Lcd_Set_Cursor(0, 6);
-    Lcd_Write_String(hour);
-    Lcd_Write_Char(tick);
-    Lcd_Write_String(minute);
-    Lcd_Set_Cursor(1, 6);
-    Lcd_Write_String(qty);
-    Lcd_Set_Cursor(1, 11);
-    Lcd_Write_Char(times);
+    LcdSetCursor(0, 6);
+    LcdWriteString(hour);
+    LcdWriteChar(tick);
+    LcdWriteString(minute);
+    LcdSetCursor(1, 6);
+    LcdWriteString(qty);
+    LcdSetCursor(1, 11);
+    LcdWriteChar(times);
 }
 
 void write_feeding_screen(char feedNo, const char* feedHour, const char* feedMinute, const char* feedQty) {
@@ -390,28 +394,28 @@ void write_feeding_screen(char feedNo, const char* feedHour, const char* feedMin
      Qty:    20g
      ****************
      */
-    Lcd_Set_Cursor(0, 5);
-    Lcd_Write_Char(feedNo);
-    Lcd_Set_Cursor(0, 8);
-    Lcd_Write_String(feedHour);
-    Lcd_Set_Cursor(0, 11);
-    Lcd_Write_String(feedMinute);
-    Lcd_Set_Cursor(1, 9);
-    Lcd_Write_String(feedQty);
+    LcdSetCursor(0, 5);
+    LcdWriteChar(feedNo);
+    LcdSetCursor(0, 8);
+    LcdWriteString(feedHour);
+    LcdSetCursor(0, 11);
+    LcdWriteString(feedMinute);
+    LcdSetCursor(1, 9);
+    LcdWriteString(feedQty);
 }
 
 void updateScreen() {
     char feed_hour[] = "  ";
     char feed_minute[] = "  ";
     char feed_qty[] = "  ";
-    time_to_digit(feedings[feedIndex].hour, feed_hour);
-    time_to_digit(feedings[feedIndex].minute, feed_minute);
-    time_to_digit(feedings[feedIndex].quantity, feed_qty);
+    timeToDigit(feedings[feedIndex].hour, feed_hour);
+    timeToDigit(feedings[feedIndex].minute, feed_minute);
+    timeToDigit(feedings[feedIndex].quantity, feed_qty);
 
-    time_to_digit(hours, str_hours);
-    time_to_digit(minutes, str_minutes);
-    time_to_digit(totalQty, str_total_qty);
-    time_to_digit(tmp_num, str_tmp_num);
+    timeToDigit(hours, str_hours);
+    timeToDigit(minutes, str_minutes);
+    timeToDigit(totalQty, str_total_qty);
+    timeToDigit(tmp_num, str_tmp_num);
     
     switch (display_state) {
         case ST_START_SCREEN:
@@ -519,12 +523,12 @@ void main(void) {
     
     ClrWdt();
     
-    Lcd_Init();
-    Lcd_Clear();
+    LcdInit();
+    LcdClear();
     display_state = ST_START_SCREEN;
     renderScreenTemplate(display_state);
     
-    //motor_setup();
+    //motorSetup();
     //_motor_on = 1;
     while (1) {
         //motor_step();

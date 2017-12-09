@@ -1,13 +1,11 @@
 
-#include <pic18f2420.h>
-
 #include "stepper_motor.h"
 
 #define TMR3_FULL_SPEED 0xFFE0
 #define TMR3_HALF_SPEED 0xFF70
 #define TMR3_QTR_SPEED  0xFF30
 
-void motor_setup() {
+void motorSetup() {
     
     TRISBbits.RB3 = 0;
     TRISBbits.RB4 = 0;

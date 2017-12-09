@@ -4,7 +4,6 @@
  *
  * Created on September 22, 2017, 8:36 PM
  */
-#include <xc.h>
 
 #define TMR1_RESET_VALUE 0xC000
 
@@ -20,7 +19,5 @@ char str_hours[] = "00";
 char tick = 0;
 
 void setupRealTimeClock();
-
-void time_to_digit(char time, char* timestr);
 
 void addOneSecond();
