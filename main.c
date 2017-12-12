@@ -457,40 +457,40 @@ void updateScreen() {
         case ST_START_SCREEN:
             writeStartScreen(str_hours, str_minutes, ':',
                     str_total_qty, totalFeedings + 48);
-            //lcdCursorBlink(0);
+            lcdCursorBlink(0);
             break;
         case ST_EDIT_TIME_HOUR:
             writeStartScreen(str_tmp_num, str_minutes, ':',
                     str_total_qty, totalFeedings + 48);
-            //lcdSetCursor(0, 7);
-            //lcdCursorBlink(1);
+            lcdSetCursor(0, 7);
+            lcdCursorBlink(1);
             break;
         case ST_EDIT_TIME_MINUTE:
             writeStartScreen(str_hours, str_tmp_num, ':',
                     str_total_qty, totalFeedings + 48);
-            //lcdSetCursor(0, 10);
-            //lcdCursorBlink(1);
+            lcdSetCursor(0, 10);
+            lcdCursorBlink(1);
             break;
 
         case ST_VIEW_FEED:
             write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, feed_qty);
-            //lcdCursorBlink(0);
+            lcdCursorBlink(0);
             break;
 
         case ST_EDIT_FEED_HOUR:
             write_feeding_screen(feedIndex + 1 + 48, str_tmp_num, feed_minute, feed_qty);
-            //lcdSetCursor(0, 9);
-            //lcdCursorBlink(1);
+            lcdSetCursor(0, 9);
+            lcdCursorBlink(1);
             break;
         case ST_EDIT_FEED_MINUTE:
             write_feeding_screen(feedIndex + 1 + 48, feed_hour, str_tmp_num, feed_qty);
-            //lcdSetCursor(0, 12);
-            //lcdCursorBlink(1);
+            lcdSetCursor(0, 12);
+            lcdCursorBlink(1);
             break;
         case ST_EDIT_FEED_QTY:
             write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, str_tmp_num);
-            //lcdSetCursor(1, 9);
-            //lcdCursorBlink(1);
+            lcdSetCursor(1, 9);
+            lcdCursorBlink(1);
             break;
         case ST_LOADING_FOOD:
             write_loading_screen(0, 0);
@@ -523,6 +523,7 @@ void interrupt handleInterrupt() {
                 wakeUp();
             } else {
                 key_pressed = KEY_ENTER;
+                sleepCounter = 0;
                 process_key_input();
                 updateScreen();
             }
@@ -535,6 +536,7 @@ void interrupt handleInterrupt() {
             if (wasSleeping) {
                 wakeUp();
             } else {
+                sleepCounter = 0;
                 key_pressed = KEY_PLUS;
                 process_key_input();
                 updateScreen();
@@ -548,6 +550,7 @@ void interrupt handleInterrupt() {
             if (wasSleeping) {//woken up, go back to sleep
                 wakeUp();
             } else {
+                sleepCounter = 0;
                 key_pressed = KEY_MINUS;
                 process_key_input();
                 updateScreen();

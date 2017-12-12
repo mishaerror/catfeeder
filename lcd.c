@@ -223,8 +223,8 @@ void lcdOn(unsigned on) {
 }
 void lcdCursorBlink(unsigned on) {
     if(on) {
-      lcdCmd(LCD_DISPLAYCONTROL | LCD_CURSORON | LCD_BLINKON);
+      lcdCmd(LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKOFF);
     } else {
-      lcdCmd(LCD_DISPLAYCONTROL | LCD_CURSOROFF | LCD_BLINKOFF);
+      lcdCmd(LCD_DISPLAYCONTROL | LCD_DISPLAYON |LCD_CURSOROFF | LCD_BLINKOFF);
     }
 }
