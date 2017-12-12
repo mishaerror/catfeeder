@@ -221,7 +221,7 @@ void lcdOn(unsigned on) {
     lcdCmd(LCD_DISPLAYCONTROL | lcd_display_control);
     __delay_ms(5);
 }
-void lcdCursorBlink(unsigned on) {
+void lcdCursor(unsigned on) {
     if(on) {
       lcdCmd(LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKOFF);
     } else {

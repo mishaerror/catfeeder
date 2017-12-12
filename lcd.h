@@ -16,4 +16,4 @@ void lcdInit();
 
 void lcdOn(unsigned on);
 
-void lcdCursorBlink(unsigned on);
+void lcdCursor(unsigned on);

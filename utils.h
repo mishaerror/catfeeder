@@ -17,6 +17,7 @@ extern "C" {
 void eepromWrite(unsigned int addr, unsigned char byte);
 unsigned char eepromRead(unsigned int addr);
 void timeToDigit(char time, char* timestr);
+inline char digitToChar(char number);
 
 #ifdef	__cplusplus
 }

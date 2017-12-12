@@ -59,10 +59,6 @@ unsigned char totalFeedings = 0;
 
 long weight_tare;
 
-char str_seconds[] = "00";
-char str_minutes[] = "00";
-char str_hours[] = "00";
-
 DISPLAY_STATE_t display_state;
 
 unsigned wasSleeping = 0;
@@ -400,7 +396,7 @@ void write_loading_screen(unsigned char feed, unsigned char qty) {
     //lcdWriteString(str_qty);
 }
 
-void writeStartScreen(const char * hour, const char* minute, const char tick, const char* qty, const char times) {
+void writeStartScreen(const char * hour, const char* minute, const char* qty, const char times) {
     char secs[] = "  ";
     /*
      ****************
@@ -410,9 +406,9 @@ void writeStartScreen(const char * hour, const char* minute, const char tick, co
      */
     lcdSetCursor(0, 6);
     lcdWriteString(hour);
-    lcdWriteChar(tick);
+    lcdWriteChar(':');
     lcdWriteString(minute);
-    lcdWriteChar(tick);
+    lcdWriteChar(':');
     timeToDigit(seconds, secs);
     lcdWriteString(secs);
     lcdSetCursor(1, 6);
@@ -439,6 +435,8 @@ void write_feeding_screen(char feedNo, const char* feedHour, const char* feedMin
 }
 
 void updateScreen() {
+    char str_minutes[] = "00";
+    char str_hours[] = "00";
     char feed_hour[] = "  ";
     char feed_minute[] = "  ";
     char feed_qty[] = "  ";
@@ -455,42 +453,42 @@ void updateScreen() {
 
     switch (display_state) {
         case ST_START_SCREEN:
-            writeStartScreen(str_hours, str_minutes, ':',
-                    str_total_qty, totalFeedings + 48);
-            lcdCursorBlink(0);
+            writeStartScreen(str_hours, str_minutes,
+                    str_total_qty, digitToChar(totalFeedings));
+            lcdCursor(0);
             break;
         case ST_EDIT_TIME_HOUR:
-            writeStartScreen(str_tmp_num, str_minutes, ':',
-                    str_total_qty, totalFeedings + 48);
+            writeStartScreen(str_tmp_num, str_minutes,
+                    str_total_qty, digitToChar(totalFeedings));
             lcdSetCursor(0, 7);
-            lcdCursorBlink(1);
+            lcdCursor(1);
             break;
         case ST_EDIT_TIME_MINUTE:
-            writeStartScreen(str_hours, str_tmp_num, ':',
-                    str_total_qty, totalFeedings + 48);
+            writeStartScreen(str_hours, str_tmp_num,
+                    str_total_qty, digitToChar(totalFeedings));
             lcdSetCursor(0, 10);
-            lcdCursorBlink(1);
+            lcdCursor(1);
             break;
 
         case ST_VIEW_FEED:
-            write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, feed_qty);
-            lcdCursorBlink(0);
+            write_feeding_screen(digitToChar(feedIndex + 1), feed_hour, feed_minute, feed_qty);
+            lcdCursor(0);
             break;
 
         case ST_EDIT_FEED_HOUR:
-            write_feeding_screen(feedIndex + 1 + 48, str_tmp_num, feed_minute, feed_qty);
+            write_feeding_screen(digitToChar(feedIndex + 1), str_tmp_num, feed_minute, feed_qty);
             lcdSetCursor(0, 9);
-            lcdCursorBlink(1);
+            lcdCursor(1);
             break;
         case ST_EDIT_FEED_MINUTE:
-            write_feeding_screen(feedIndex + 1 + 48, feed_hour, str_tmp_num, feed_qty);
+            write_feeding_screen(digitToChar(feedIndex + 1), feed_hour, str_tmp_num, feed_qty);
             lcdSetCursor(0, 12);
-            lcdCursorBlink(1);
+            lcdCursor(1);
             break;
         case ST_EDIT_FEED_QTY:
-            write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, str_tmp_num);
-            lcdSetCursor(1, 9);
-            lcdCursorBlink(1);
+            write_feeding_screen(digitToChar(feedIndex + 1), feed_hour, feed_minute, str_tmp_num);
+            lcdSetCursor(1, 10);
+            lcdCursor(1);
             break;
         case ST_LOADING_FOOD:
             write_loading_screen(0, 0);
