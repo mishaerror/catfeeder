@@ -56,6 +56,14 @@
 #define LCD_I2C_EN_ON 0b00000100;
 #define LCD_I2C_EN_OFF 0b11111011;
 
+char lcd_display_control = 0;
+
+char lcd_display_function = 0;
+
+char lcd_display_mode = 0;
+
+unsigned _lcd_on = 1;
+
 #ifndef LCD_I2C 
 
 void Lcd_Port(unsigned char a) {
@@ -108,7 +116,7 @@ void lcdWriteByte(const unsigned char a, unsigned char rs) {
     i2cmd |= rs; //PO
     //P1 is already 0, always write
     i2cmd |= 0b0000; // P2, EN = 0
-    i2cmd |= 0b1000; // P3 - LED on
+    i2cmd |= (_lcd_on << 3); // P3 - LED on
 
     //set high nibble on d4-d7
     i2cmd |= (a & 0xF0);
@@ -170,10 +178,6 @@ void lcdSetCursor(char row, char col) {
 
 void lcdInit() {
 
-    char lcd_display_control = 0;
-    char lcd_display_function = 0;
-    char lcd_display_mode = 0;
-
 #ifdef LCD_I2C
     i2cInit(100000);
 #else
@@ -207,4 +211,20 @@ void lcdInit() {
 
 }
 
-
+void lcdOn(unsigned on) {
+    _lcd_on = on;
+    if(on) {
+        lcd_display_control |= LCD_DISPLAYON;
+    } else {
+        lcd_display_control |= LCD_DISPLAYOFF;
+    }
+    lcdCmd(LCD_DISPLAYCONTROL | lcd_display_control);
+    __delay_ms(5);
+}
+void lcdCursorBlink(unsigned on) {
+    if(on) {
+      lcdCmd(LCD_DISPLAYCONTROL | LCD_CURSORON | LCD_BLINKON);
+    } else {
+      lcdCmd(LCD_DISPLAYCONTROL | LCD_CURSOROFF | LCD_BLINKOFF);
+    }
+}

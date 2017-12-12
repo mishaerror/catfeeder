@@ -10,12 +10,12 @@
 
 // CONFIG2L
 #pragma config PWRT = OFF       // Power-up Timer Enable bit (PWRT disabled)
-#pragma config BOREN = OFF      // Brown-out Reset Enable bits (Brown-out Reset disabled in hardware and software)
+#pragma config BOREN = ON      // Brown-out Reset Enable bits (Brown-out Reset disabled in hardware and software)
 #pragma config BORV = 3         // Brown Out Reset Voltage bits (Minimum setting)
 
 // CONFIG2H
-#pragma config WDT = ON         // Watchdog Timer Enable bit (WDT enabled)
-#pragma config WDTPS = 16384    // Watchdog Timer Postscale Select bits (1:16384)
+#pragma config WDT = OFF         // Watchdog Timer Enable bit (WDT disabled)
+#pragma config WDTPS = 16384    // Watchdog Timer Postscale Select bits
 
 // CONFIG3H
 #pragma config CCP2MX = PORTC   // CCP2 MUX bit (CCP2 input/output is multiplexed with RC1)

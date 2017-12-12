@@ -22,9 +22,9 @@ void writeTimeToEeprom() {
 }
 
 void setupRealTimeClock() {
-    TMR1 = TMR1_RESET_VALUE;//32k ticks per second, interrupt on overflow
-
     readTimeFromEeprom();
+        
+    TMR1 = TMR1_RESET_VALUE;//interrupt on overflow of this value, with 32kHz ticks
     
     T1CONbits.RD16 = 0; //16-bit read
     T1CONbits.T1CKPS = 0; //prescaler 1:1
@@ -34,28 +34,41 @@ void setupRealTimeClock() {
 
     T1CONbits.TMR1CS = 1; //external clock
     T1CONbits.T1OSCEN = 1; //enable oscilator
+    T1CONbits.T1SYNC = 1; //async
     T1CONbits.TMR1ON = 1; //enable timer
+}
+
+void addOneHour() {
+    hours++;
+    
+    if (hours > 23) {
+        hours = 0;
+    }
+    eepromWrite(TIME_EEPROM_ADDR + 1, hours);
+}
+
+void addOneMinute() {
+    minutes++;
+    
+    if (minutes > 59) {
+        minutes = 0;
+        addOneHour();
+    }
+    eepromWrite(TIME_EEPROM_ADDR, minutes);
 }
 
 void addOneSecond() {
     seconds++;
-    ClrWdt();
     
     if (seconds > 59) {
         seconds = 0;
-        minutes++;
-        eepromWrite(TIME_EEPROM_ADDR, minutes);
-    }
-
-    if (minutes > 59) {
-        minutes = 0;
-        hours++;
-        eepromWrite(TIME_EEPROM_ADDR, minutes);
-    }
-
-    if (hours > 23) {
-        hours = 0;
-        eepromWrite(TIME_EEPROM_ADDR + 1, hours);
+        addOneMinute();
     }
     
+}
+
+void addSeconds(char nofSeconds) {
+    for(char i = 0; i < nofSeconds; i++) {
+        addOneSecond();
+    }
 }

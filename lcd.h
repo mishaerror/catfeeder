@@ -14,3 +14,6 @@ void lcdSetCursor(char row, char col);
 
 void lcdInit();
 
+void lcdOn(unsigned on);
+
+void lcdCursorBlink(unsigned on);

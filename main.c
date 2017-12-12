@@ -65,6 +65,32 @@ char str_hours[] = "00";
 
 DISPLAY_STATE_t display_state;
 
+unsigned wasSleeping = 0;
+
+#define SLEEP_TIMEOUT 15
+unsigned char sleepCounter = 0;
+
+void goToSleep() {
+    if (wasSleeping) {
+        Sleep();
+        return;
+    }
+    //turn off periferrals
+    turnOffHX711();
+    lcdOn(0);
+    wasSleeping = 1;
+    Sleep();
+}
+
+void wakeUp() {
+    if (!wasSleeping) {
+        return;
+    }
+    wasSleeping = 0;
+    lcdOn(1);
+    sleepCounter = 0;
+}
+
 void renderScreenTemplate(DISPLAY_STATE_t state) {
     lcdClear();
     lcdHome();
@@ -95,20 +121,21 @@ void renderScreenTemplate(DISPLAY_STATE_t state) {
 
 unsigned char getTotalQty() {
     char result = 0;
-    for(char i = 0; i < 4; i++) {
+    for (char i = 0; i < 4; i++) {
         result += feedings[i].quantity;
     }
-    
+
     return result;
 }
+
 unsigned char getTotalFeedings() {
     char result = 0;
-    for(char i = 0; i < 4; i++) {
-        if(feedings[i].quantity > 0) {
-            result ++;
+    for (char i = 0; i < 4; i++) {
+        if (feedings[i].quantity > 0) {
+            result++;
         }
     }
-    
+
     return result;
 }
 
@@ -252,18 +279,19 @@ void write_feed_to_eeprom(unsigned char feedIndex) {
 void read_feed_from_eeprom(char feedIndex) {
     unsigned char feed_address = feedIndex * 3;
     feedings[feedIndex].hour = eepromRead(feed_address);
-    if(feedings[feedIndex].hour > 23) {
-       feedings[feedIndex].hour = 0;
-    } 
+    if (feedings[feedIndex].hour > 23) {
+        feedings[feedIndex].hour = 0;
+    }
     feedings[feedIndex].minute = eepromRead(feed_address + 1);
-    if(feedings[feedIndex].minute > 59) {
-       feedings[feedIndex].minute = 0;
-    } 
+    if (feedings[feedIndex].minute > 59) {
+        feedings[feedIndex].minute = 0;
+    }
     feedings[feedIndex].quantity = eepromRead(feed_address + 2);
-    if(feedings[feedIndex].quantity > 99) {
-       feedings[feedIndex].quantity = 0;
-    } 
+    if (feedings[feedIndex].quantity > 99) {
+        feedings[feedIndex].quantity = 0;
+    }
 }
+
 void edit_feed_qty_key_pressed() {
     if (key_pressed == KEY_ENTER) {
         feedings[feedIndex].quantity = tmp_num;
@@ -345,25 +373,25 @@ void setupPorts() {
 }
 
 void write_loading_screen(unsigned char feed, unsigned char qty) {
-/*
-    ****************
-    Loading feed 1
-    Qty: 02/25g
-    ****************
- * */
+    /*
+     ****************
+        Loading feed 1
+        Qty: 02/25g
+     ****************
+     * */
     char str_qty[] = "  ";
 
-    if(weight_tare == 0) {
+    if (weight_tare == 0) {
         weight_tare = getWeight();
     }
     long value = getWeight() - weight_tare;
-    
+
     lcdSetCursor(0, 13);
     lcdWriteChar('1');
     lcdSetCursor(1, 5);
     //timeToDigit(qty, str_qty);
     //lcdWriteString(str_qty);
-    if(value < 10){
+    if (value < 10) {
         lcdWriteChar('0');
     }
     lcdWriteString(str_qty);
@@ -373,6 +401,7 @@ void write_loading_screen(unsigned char feed, unsigned char qty) {
 }
 
 void writeStartScreen(const char * hour, const char* minute, const char tick, const char* qty, const char times) {
+    char secs[] = "  ";
     /*
      ****************
      Time: 12:44     
@@ -383,6 +412,9 @@ void writeStartScreen(const char * hour, const char* minute, const char tick, co
     lcdWriteString(hour);
     lcdWriteChar(tick);
     lcdWriteString(minute);
+    lcdWriteChar(tick);
+    timeToDigit(seconds, secs);
+    lcdWriteString(secs);
     lcdSetCursor(1, 6);
     lcdWriteString(qty);
     lcdSetCursor(1, 11);
@@ -418,37 +450,52 @@ void updateScreen() {
     timeToDigit(minutes, str_minutes);
     timeToDigit(totalQty, str_total_qty);
     timeToDigit(tmp_num, str_tmp_num);
-    
+
+    lcdHome();
+
     switch (display_state) {
         case ST_START_SCREEN:
-            writeStartScreen(str_hours, str_minutes, tick ? ':' : ' ',
+            writeStartScreen(str_hours, str_minutes, ':',
                     str_total_qty, totalFeedings + 48);
+            //lcdCursorBlink(0);
             break;
         case ST_EDIT_TIME_HOUR:
-            writeStartScreen(tick ? str_tmp_num : "__", str_minutes, ':',
+            writeStartScreen(str_tmp_num, str_minutes, ':',
                     str_total_qty, totalFeedings + 48);
+            //lcdSetCursor(0, 7);
+            //lcdCursorBlink(1);
             break;
         case ST_EDIT_TIME_MINUTE:
-            writeStartScreen(str_hours, tick ? str_tmp_num : "__", ':',
+            writeStartScreen(str_hours, str_tmp_num, ':',
                     str_total_qty, totalFeedings + 48);
+            //lcdSetCursor(0, 10);
+            //lcdCursorBlink(1);
             break;
 
         case ST_VIEW_FEED:
             write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, feed_qty);
+            //lcdCursorBlink(0);
             break;
 
         case ST_EDIT_FEED_HOUR:
-            write_feeding_screen(feedIndex + 1 + 48, tick ? str_tmp_num : "__", feed_minute, feed_qty);
+            write_feeding_screen(feedIndex + 1 + 48, str_tmp_num, feed_minute, feed_qty);
+            //lcdSetCursor(0, 9);
+            //lcdCursorBlink(1);
             break;
         case ST_EDIT_FEED_MINUTE:
-            write_feeding_screen(feedIndex + 1 + 48, feed_hour, tick ? str_tmp_num : "__", feed_qty);
+            write_feeding_screen(feedIndex + 1 + 48, feed_hour, str_tmp_num, feed_qty);
+            //lcdSetCursor(0, 12);
+            //lcdCursorBlink(1);
             break;
         case ST_EDIT_FEED_QTY:
-            write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, tick ? str_tmp_num : "__");
+            write_feeding_screen(feedIndex + 1 + 48, feed_hour, feed_minute, str_tmp_num);
+            //lcdSetCursor(1, 9);
+            //lcdCursorBlink(1);
             break;
         case ST_LOADING_FOOD:
             write_loading_screen(0, 0);
             break;
+
     }
 }
 
@@ -457,57 +504,71 @@ void interrupt handleInterrupt() {
     if (TMR1IE && TMR1IF) { // any timer 1 interrupts?
         TMR1IF = 0;
         TMR1 = TMR1_RESET_VALUE;
-
-        tick++;//half second tick
-        if (tick == 2) {//rollover
-            tick = 0;
-            LATC5 ^= 1;//flip indicator light
-            addOneSecond();
+        LATC5 ^= 1;
+        addOneSecond();
+        sleepCounter++;
+        if (wasSleeping || sleepCounter >= SLEEP_TIMEOUT) {
+            goToSleep();
+        } else {
+            updateScreen();
         }
-        updateScreen();
         return;
     }
 
-    //handle button press events
+    //handle button press events. If waking up from sleep, don't process regular key event
     if (INT0IF) {
         INT0IF = 0;
         if (!PORTBbits.RB0) {
-          key_pressed = KEY_ENTER;
-          process_key_input();
-          updateScreen();
+            if (wasSleeping) {
+                wakeUp();
+            } else {
+                key_pressed = KEY_ENTER;
+                process_key_input();
+                updateScreen();
+            }
         }
         return;
     }
     if (INT1IF) {
         INT1IF = 0;
         if (!PORTBbits.RB1) {
-          key_pressed = KEY_PLUS;
-          process_key_input();
-          updateScreen();
+            if (wasSleeping) {
+                wakeUp();
+            } else {
+                key_pressed = KEY_PLUS;
+                process_key_input();
+                updateScreen();
+           }
         }
         return;
     }
     if (INT2IF) {
-        INT1IF = 0;
+        INT2IF = 0;
         if (!PORTBbits.RB2) {
-          key_pressed = KEY_MINUS;
-          process_key_input();
-          updateScreen();
+            if (wasSleeping) {//woken up, go back to sleep
+                wakeUp();
+            } else {
+                key_pressed = KEY_MINUS;
+                process_key_input();
+                updateScreen();
+            }
         }
         return;
     }
-    
-    if(TMR3IF) {
+
+    if (TMR3IF) {
         TMR3IF = 0;
-        
+
         motorStep();
-        
+
         return;
     }
+
 }
+
 void reload_feedings() {
     unsigned char i;
-    for( i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++) {
         read_feed_from_eeprom(i);
     }
     totalQty = getTotalQty();
@@ -527,15 +588,12 @@ void main(void) {
 
     //enable weight sensor and clock
     initHX711();
+
     setupRealTimeClock();
-    //interrupts will enable clock mechanism
+
     enableInterrupts();
-    
-    //motorSetup();
-    //_motor_on = 1;
+
+    goToSleep(); //sleep by default, wake up on button press or on WDT
     while (1) {
-        //motorStep();
-        //__delay_us(100);
     }
 }
- 
