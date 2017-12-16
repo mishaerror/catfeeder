@@ -12,7 +12,9 @@
 
 void motorStep();
 
-void motorSetup();
+void motorStart();
+
+void motorStop();
 
 
 #endif	/* STEPPER_MOTOR_H */

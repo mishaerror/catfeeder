@@ -3,7 +3,7 @@
 #include "realtimeclock.h"
 #include "utils.h"
 
-#define TIME_EEPROM_ADDR 12
+#define TIME_EEPROM_ADDR 30
 
 void readTimeFromEeprom() {
     minutes = eepromRead(TIME_EEPROM_ADDR);

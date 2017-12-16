@@ -16,7 +16,7 @@
 #include "xcincludes.h"
 
 #define SCALE_FACTOR 2100
-#define NOF_SAMPLES 8
+#define NOF_SAMPLES 10
 
 #define HX_SCK LATCbits.LATC6
 #define HX_DT PORTCbits.RC7

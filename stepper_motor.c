@@ -14,7 +14,7 @@ unsigned char _motor_step = 0;
 unsigned char _motor_on = 0;
 unsigned short _motor_speed;
 
-void motorSetup() {
+void motorStart() {
     
     TRISBbits.RB3 = 0;
     TRISBbits.RB4 = 0;
@@ -32,6 +32,12 @@ void motorSetup() {
     TMR3IE = 1;// enable timer 3 interrupt
     TMR3IF = 0;
     TMR3ON = 1;
+}
+
+void motorStop() {
+    TMR3ON = 0;
+    TMR3IE = 0;
+    _motor_on = 0;
 }
 
 void motorStep() {

@@ -1,6 +1,6 @@
 #include "utils.h"
 
-void timeToDigit(unsigned char time, unsigned char* timestr) {
+void numberToLcdStr(unsigned char time, unsigned char* timestr) {
 
     if (time < 10) {
         timestr[0] = '0';
@@ -39,6 +39,6 @@ unsigned char eepromRead(unsigned int addr) {
     return EEDATA;
 }
 
-inline char digitToChar(char number) {
+inline char digitToLcdChar(char number) {
     return number + 48;
 }

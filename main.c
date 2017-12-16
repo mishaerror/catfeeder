@@ -49,6 +49,11 @@ FEEDING_t feedings[4] = {
     {0, 0, 0},
     {0, 0, 0}
 };
+
+char nextFeedHour = 100;
+char nextFeedMinute = 100;
+char nextFeed = -1;
+
 unsigned char feedIndex = 0;
 unsigned char tmp_num; //hold value of currently edited number
 char str_tmp_num[] = "  ";
@@ -58,6 +63,7 @@ unsigned char loaded_qty = 0;
 unsigned char totalFeedings = 0;
 
 long weight_tare;
+long weight;
 
 DISPLAY_STATE_t display_state;
 
@@ -65,6 +71,21 @@ unsigned wasSleeping = 0;
 
 #define SLEEP_TIMEOUT 15
 unsigned char sleepCounter = 0;
+
+void findNextLoad() {
+    //from current time, first feed that was not executed today
+    nextFeed = -1;
+    for (int i = 0; i < 4; i++) {
+        if (feedings[i].hour >= hours
+          && feedings[i].minute >= minutes
+          && feedings[i].hour < nextFeedHour
+          && feedings[i].minute < nextFeedMinute) {
+            nextFeedHour = feedings[i].hour;
+            nextFeedMinute = feedings[i].minute;
+            nextFeed = i;
+        }
+    }
+}
 
 void goToSleep() {
     if (wasSleeping) {
@@ -337,6 +358,7 @@ void process_key_input() {
         case ST_EDIT_FEED_QTY:
             edit_feed_qty_key_pressed();
             break;
+            //case ST_LOADING_FOOD: do nothing
     }
 }
 
@@ -368,32 +390,23 @@ void setupPorts() {
     LATC5 = 1; //signal lamp
 }
 
-void write_loading_screen(unsigned char feed, unsigned char qty) {
+void write_loading_screen() {
     /*
      ****************
-        Loading feed 1
-        Qty: 02/25g
+     Loading feed 1
+     Qty: 02/25g
      ****************
      * */
     char str_qty[] = "  ";
 
-    if (weight_tare == 0) {
-        weight_tare = getWeight();
-    }
-    long value = getWeight() - weight_tare;
-
     lcdSetCursor(0, 13);
-    lcdWriteChar('1');
+    lcdWriteChar(digitToLcdChar(nextFeed + 1));
     lcdSetCursor(1, 5);
-    //timeToDigit(qty, str_qty);
-    //lcdWriteString(str_qty);
-    if (value < 10) {
-        lcdWriteChar('0');
-    }
+    numberToLcdStr(weight, str_qty);
     lcdWriteString(str_qty);
-    //lcdSetCursor(1, 8);
-    //timeToDigit(feedings[0].quantity, str_qty);
-    //lcdWriteString(str_qty);
+    numberToLcdStr(feedings[nextFeed].quantity, str_qty);
+    lcdSetCursor(1, 8);
+    lcdWriteString(str_qty);
 }
 
 void writeStartScreen(const char * hour, const char* minute, const char* qty, const char times) {
@@ -409,7 +422,7 @@ void writeStartScreen(const char * hour, const char* minute, const char* qty, co
     lcdWriteChar(':');
     lcdWriteString(minute);
     lcdWriteChar(':');
-    timeToDigit(seconds, secs);
+    numberToLcdStr(seconds, secs);
     lcdWriteString(secs);
     lcdSetCursor(1, 6);
     lcdWriteString(qty);
@@ -440,72 +453,113 @@ void updateScreen() {
     char feed_hour[] = "  ";
     char feed_minute[] = "  ";
     char feed_qty[] = "  ";
-    timeToDigit(feedings[feedIndex].hour, feed_hour);
-    timeToDigit(feedings[feedIndex].minute, feed_minute);
-    timeToDigit(feedings[feedIndex].quantity, feed_qty);
+    numberToLcdStr(feedings[feedIndex].hour, feed_hour);
+    numberToLcdStr(feedings[feedIndex].minute, feed_minute);
+    numberToLcdStr(feedings[feedIndex].quantity, feed_qty);
 
-    timeToDigit(hours, str_hours);
-    timeToDigit(minutes, str_minutes);
-    timeToDigit(totalQty, str_total_qty);
-    timeToDigit(tmp_num, str_tmp_num);
+    numberToLcdStr(hours, str_hours);
+    numberToLcdStr(minutes, str_minutes);
+    numberToLcdStr(totalQty, str_total_qty);
+    numberToLcdStr(tmp_num, str_tmp_num);
 
     lcdHome();
 
     switch (display_state) {
         case ST_START_SCREEN:
             writeStartScreen(str_hours, str_minutes,
-                    str_total_qty, digitToChar(totalFeedings));
+                    str_total_qty, digitToLcdChar(totalFeedings));
             lcdCursor(0);
             break;
         case ST_EDIT_TIME_HOUR:
             writeStartScreen(str_tmp_num, str_minutes,
-                    str_total_qty, digitToChar(totalFeedings));
+                    str_total_qty, digitToLcdChar(totalFeedings));
             lcdSetCursor(0, 7);
             lcdCursor(1);
             break;
         case ST_EDIT_TIME_MINUTE:
             writeStartScreen(str_hours, str_tmp_num,
-                    str_total_qty, digitToChar(totalFeedings));
+                    str_total_qty, digitToLcdChar(totalFeedings));
             lcdSetCursor(0, 10);
             lcdCursor(1);
             break;
 
         case ST_VIEW_FEED:
-            write_feeding_screen(digitToChar(feedIndex + 1), feed_hour, feed_minute, feed_qty);
+            write_feeding_screen(digitToLcdChar(feedIndex + 1), feed_hour, feed_minute, feed_qty);
             lcdCursor(0);
             break;
 
         case ST_EDIT_FEED_HOUR:
-            write_feeding_screen(digitToChar(feedIndex + 1), str_tmp_num, feed_minute, feed_qty);
+            write_feeding_screen(digitToLcdChar(feedIndex + 1), str_tmp_num, feed_minute, feed_qty);
             lcdSetCursor(0, 9);
             lcdCursor(1);
             break;
         case ST_EDIT_FEED_MINUTE:
-            write_feeding_screen(digitToChar(feedIndex + 1), feed_hour, str_tmp_num, feed_qty);
+            write_feeding_screen(digitToLcdChar(feedIndex + 1), feed_hour, str_tmp_num, feed_qty);
             lcdSetCursor(0, 12);
             lcdCursor(1);
             break;
         case ST_EDIT_FEED_QTY:
-            write_feeding_screen(digitToChar(feedIndex + 1), feed_hour, feed_minute, str_tmp_num);
+            write_feeding_screen(digitToLcdChar(feedIndex + 1), feed_hour, feed_minute, str_tmp_num);
             lcdSetCursor(1, 10);
             lcdCursor(1);
             break;
         case ST_LOADING_FOOD:
-            write_loading_screen(0, 0);
+            write_loading_screen();
             break;
 
     }
 }
 
+void checkWeight() {
+    if (weight_tare == 0) {
+        weight_tare = getWeight();
+    }
+    weight = getWeight() - weight_tare;
+
+    if (weight >= feedings[nextFeed].quantity) {
+        TMR0ON = 0;
+        motorStop();
+        findNextLoad();
+        display_state = ST_START_SCREEN;
+    }
+}
+
 void interrupt handleInterrupt() {
+
+    if (TMR0IF) {
+        TMR0IF = 0;
+
+        checkWeight();
+    }
+
+    if (TMR3IF) { // timer 3 for stepper motor
+        TMR3IF = 0;
+
+        if (display_state == ST_LOADING_FOOD) {
+            motorStep();
+        }
+    }
 
     if (TMR1IE && TMR1IF) { // any timer 1 interrupts?
         TMR1IF = 0;
         TMR1 = TMR1_RESET_VALUE;
         LATC5 ^= 1;
         addOneSecond();
+
+        if (nextFeed != -1
+                && minutes == nextFeedMinute
+                && hours == nextFeedHour
+                && display_state != ST_LOADING_FOOD) {
+            display_state = ST_LOADING_FOOD;
+            weight_tare = 0;
+            TMR0 = 0x0000;
+            TMR1ON = 1;
+            motorStart();
+        }
+
         sleepCounter++;
-        if (wasSleeping || sleepCounter >= SLEEP_TIMEOUT) {
+
+        if (display_state != ST_LOADING_FOOD && (wasSleeping || sleepCounter >= SLEEP_TIMEOUT)) {
             goToSleep();
         } else {
             updateScreen();
@@ -538,7 +592,7 @@ void interrupt handleInterrupt() {
                 key_pressed = KEY_PLUS;
                 process_key_input();
                 updateScreen();
-           }
+            }
         }
         return;
     }
@@ -557,14 +611,6 @@ void interrupt handleInterrupt() {
         return;
     }
 
-    if (TMR3IF) {
-        TMR3IF = 0;
-
-        motorStep();
-
-        return;
-    }
-
 }
 
 void reload_feedings() {
@@ -574,6 +620,19 @@ void reload_feedings() {
     }
     totalQty = getTotalQty();
     totalFeedings = getTotalFeedings();
+}
+
+//timer0 that is causing interrupt when we sample weight
+
+void setupWeightTimer() {
+    TMR0 = 0x0000;
+    T0SE = 0; //low-to-high transition
+    T0CS = 0; //internal oscilator
+    TMR0IE = 1; //enable timer interrupt
+    T08BIT = 0; //16-bit
+    T0PS0 = 0;
+    T0PS1 = 1;
+    T0PS2 = 0; //1:8 prescaler, 
 }
 
 void main(void) {
@@ -592,9 +651,15 @@ void main(void) {
 
     setupRealTimeClock();
 
+    findNextLoad();
+
+    setupWeightTimer();
+
     enableInterrupts();
 
     goToSleep(); //sleep by default, wake up on button press or on WDT
+
     while (1) {
+        //
     }
 }
