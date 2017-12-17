@@ -16,8 +16,9 @@ extern "C" {
 
 void eepromWrite(unsigned int addr, unsigned char byte);
 unsigned char eepromRead(unsigned int addr);
-void numberToLcdStr(unsigned char time, unsigned char* timestr);
+inline void numberToLcdStr(unsigned char time, unsigned char* timestr);
 inline char digitToLcdChar(char number);
+inline char timeAfter(char h1, char m1, char h2, char m2);
 
 #ifdef	__cplusplus
 }

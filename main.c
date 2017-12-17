@@ -72,14 +72,13 @@ unsigned wasSleeping = 0;
 #define SLEEP_TIMEOUT 15
 unsigned char sleepCounter = 0;
 
+
 void findNextLoad() {
     //from current time, first feed that was not executed today
     nextFeed = -1;
     for (int i = 0; i < 4; i++) {
-        if (feedings[i].hour >= hours
-          && feedings[i].minute >= minutes
-          && feedings[i].hour < nextFeedHour
-          && feedings[i].minute < nextFeedMinute) {
+        if (timeAfter(feedings[i].hour, feedings[i].minute, hours, minutes) && 
+            timeAfter(feedings[i].hour, feedings[i].minute, nextFeedHour, nextFeedMinute) ) {
             nextFeedHour = feedings[i].hour;
             nextFeedMinute = feedings[i].minute;
             nextFeed = i;
@@ -390,7 +389,7 @@ void setupPorts() {
     LATC5 = 1; //signal lamp
 }
 
-void write_loading_screen() {
+void writeLoadingScreen() {
     /*
      ****************
      Loading feed 1
@@ -504,7 +503,7 @@ void updateScreen() {
             lcdCursor(1);
             break;
         case ST_LOADING_FOOD:
-            write_loading_screen();
+            writeLoadingScreen();
             break;
 
     }
@@ -540,7 +539,7 @@ void interrupt handleInterrupt() {
         }
     }
 
-    if (TMR1IE && TMR1IF) { // any timer 1 interrupts?
+    if (TMR1IE && TMR1IF) { // any timer 1 (RTC) interrupts?
         TMR1IF = 0;
         TMR1 = TMR1_RESET_VALUE;
         LATC5 ^= 1;
