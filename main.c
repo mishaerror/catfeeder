@@ -497,7 +497,7 @@ void checkWeight() {
         weight_tare = getWeight();
     }
     long measure = getWeight();
-
+    
     weight = measure - weight_tare;
 
 
@@ -520,6 +520,7 @@ void interrupt handleInterrupt() {
         TMR0IF = 0;
         TMR0 = WEIGHT_TIMER;
         checkWeight();
+        ClrWdt();
         LATC5 ^= 1;
     }
 
@@ -554,6 +555,7 @@ void interrupt handleInterrupt() {
         }
 
         if (display_state != ST_LOADING_FOOD) {
+            ClrWdt();
             sleepCounter++;
             if ((wasSleeping || sleepCounter >= SLEEP_TIMEOUT)) {
                 goToSleep();
