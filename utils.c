@@ -44,7 +44,7 @@ inline char digitToLcdChar(char number) {
 }
 
 inline char timeAfter(char h1, char m1, char h2, char m2) {
-    if (h1>h2 || h1==h2 && m1>m2){
+    if (h1>h2 || (h1==h2 && m1>m2)){
         return 1;
     }
     

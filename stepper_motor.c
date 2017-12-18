@@ -5,10 +5,10 @@
 #define TMR3_HALF_SPEED 0xFF70
 #define TMR3_QTR_SPEED  0xFF30
 
-#define MOTOR_IN1 LATB3
-#define MOTOR_IN2 LATB4
-#define MOTOR_IN3 LATB5
-#define MOTOR_IN4 LATB6
+#define MOTOR_IN1 LATA0
+#define MOTOR_IN2 LATA1
+#define MOTOR_IN3 LATA2
+#define MOTOR_IN4 LATA3
 
 unsigned char _motor_step = 0;
 unsigned char _motor_on = 0;
@@ -16,10 +16,10 @@ unsigned short _motor_speed;
 
 void motorStart() {
     
-    TRISBbits.RB3 = 0;
-    TRISBbits.RB4 = 0;
-    TRISBbits.RB5 = 0;
-    TRISBbits.RB6 = 0;
+    TRISAbits.RA0 = 0;
+    TRISAbits.RA1 = 0;
+    TRISAbits.RA2 = 0;
+    TRISAbits.RA3 = 0;
     
     TMR3CS = 1;// sync on timer1 (real time clock)
     T3SYNC = 1;

@@ -14,6 +14,7 @@
 #include "weightsensor.h"
 
 #define BLANK_LINE "                "
+#define WEIGHT_TIMER 0xC000
 
 enum KEY_PRESSED_t {
     KEY_ENTER,
@@ -40,19 +41,14 @@ typedef struct {
     unsigned char quantity;
 } FEEDING_t;
 
-#define NOF_FEEDINGS 4;
 #define FEEDINGS_EEPROM_ADDR 0;
 
-FEEDING_t feedings[4] = {
-    {0, 0, 0},
-    {0, 0, 0},
-    {0, 0, 0},
-    {0, 0, 0}
+FEEDING_t feedings[2] = {
+    {0, 1, 10},
+    {0, 2, 15}
 };
 
-char nextFeedHour = 100;
-char nextFeedMinute = 100;
-char nextFeed = -1;
+char nextFeed;
 
 unsigned char feedIndex = 0;
 unsigned char tmp_num; //hold value of currently edited number
@@ -62,8 +58,8 @@ char str_total_qty[] = " 0";
 unsigned char loaded_qty = 0;
 unsigned char totalFeedings = 0;
 
-long weight_tare;
-long weight;
+long weight_tare = 0;
+long weight = 0;
 
 DISPLAY_STATE_t display_state;
 
@@ -72,18 +68,8 @@ unsigned wasSleeping = 0;
 #define SLEEP_TIMEOUT 15
 unsigned char sleepCounter = 0;
 
-
 void findNextLoad() {
-    //from current time, first feed that was not executed today
-    nextFeed = -1;
-    for (int i = 0; i < 4; i++) {
-        if (timeAfter(feedings[i].hour, feedings[i].minute, hours, minutes) && 
-            timeAfter(feedings[i].hour, feedings[i].minute, nextFeedHour, nextFeedMinute) ) {
-            nextFeedHour = feedings[i].hour;
-            nextFeedMinute = feedings[i].minute;
-            nextFeed = i;
-        }
-    }
+    nextFeed ^= 1;
 }
 
 void goToSleep() {
@@ -96,15 +82,6 @@ void goToSleep() {
     lcdOn(0);
     wasSleeping = 1;
     Sleep();
-}
-
-void wakeUp() {
-    if (!wasSleeping) {
-        return;
-    }
-    wasSleeping = 0;
-    lcdOn(1);
-    sleepCounter = 0;
 }
 
 void renderScreenTemplate(DISPLAY_STATE_t state) {
@@ -135,23 +112,27 @@ void renderScreenTemplate(DISPLAY_STATE_t state) {
     }
 }
 
-unsigned char getTotalQty() {
-    char result = 0;
-    for (char i = 0; i < 4; i++) {
-        result += feedings[i].quantity;
+void wakeUp() {
+    if (!wasSleeping) {
+        return;
     }
-
-    return result;
+    wasSleeping = 0;
+    lcdOn(1);
+    renderScreenTemplate(display_state);
+    sleepCounter = 0;
 }
 
-unsigned char getTotalFeedings() {
+inline unsigned char getTotalQty() {
+    return feedings[0].quantity + feedings[1].quantity;
+}
+
+inline unsigned char getTotalFeedings() {
     char result = 0;
-    for (char i = 0; i < 4; i++) {
+    for (char i = 0; i < 2; i++) {
         if (feedings[i].quantity > 0) {
             result++;
         }
     }
-
     return result;
 }
 
@@ -165,7 +146,7 @@ void start_screen_key_pressed() {
         renderScreenTemplate(display_state);
     } else if (key_pressed == KEY_MINUS) {
         display_state = ST_VIEW_FEED;
-        feedIndex = 3;
+        feedIndex = 1;
         renderScreenTemplate(display_state);
     }
 }
@@ -221,7 +202,7 @@ void view_feed_key_pressed() {
         display_state = ST_EDIT_FEED_HOUR;
         tmp_num = feedings[feedIndex].hour;
     } else if (key_pressed == KEY_PLUS) {
-        if (feedIndex == 3) {
+        if (feedIndex == 1) {
             display_state = ST_START_SCREEN;
             renderScreenTemplate(display_state);
         } else {
@@ -285,14 +266,14 @@ void edit_feed_minute_key_pressed() {
     }
 }
 
-void write_feed_to_eeprom(unsigned char feedIndex) {
+inline void write_feed_to_eeprom(unsigned char feedIndex) {
     unsigned char feed_address = feedIndex * 3;
     eepromWrite(feed_address, feedings[feedIndex].hour);
     eepromWrite(feed_address + 1, feedings[feedIndex].minute);
     eepromWrite(feed_address + 2, feedings[feedIndex].quantity);
 }
 
-void read_feed_from_eeprom(char feedIndex) {
+inline void read_feed_from_eeprom(char feedIndex) {
     unsigned char feed_address = feedIndex * 3;
     feedings[feedIndex].hour = eepromRead(feed_address);
     if (feedings[feedIndex].hour > 23) {
@@ -315,6 +296,7 @@ void edit_feed_qty_key_pressed() {
         write_feed_to_eeprom(feedIndex);
         totalQty = getTotalQty();
         totalFeedings = getTotalFeedings();
+        findNextLoad();
     } else if (key_pressed == KEY_PLUS) {
         if (tmp_num == 99) {
             tmp_num = 0;
@@ -386,7 +368,7 @@ void setupPorts() {
     TRISCbits.RC3 = 0;
     TRISCbits.RC4 = 0;
     TRISCbits.RC5 = 0;
-    LATC5 = 1; //signal lamp
+    LATC5 = 0; //signal lamp
 }
 
 void writeLoadingScreen() {
@@ -510,28 +492,38 @@ void updateScreen() {
 }
 
 void checkWeight() {
+
     if (weight_tare == 0) {
         weight_tare = getWeight();
     }
-    weight = getWeight() - weight_tare;
+    long measure = getWeight();
+
+    weight = measure - weight_tare;
+
 
     if (weight >= feedings[nextFeed].quantity) {
         TMR0ON = 0;
         motorStop();
+        weight = 0;
+        weight_tare = 0;
         findNextLoad();
         display_state = ST_START_SCREEN;
+        renderScreenTemplate(display_state);
     }
+    updateScreen();
+
 }
 
 void interrupt handleInterrupt() {
 
-    if (TMR0IF) {
+    if (TMR0IE && TMR0IF && display_state == ST_LOADING_FOOD) {
         TMR0IF = 0;
-
+        TMR0 = WEIGHT_TIMER;
         checkWeight();
+        LATC5 ^= 1;
     }
 
-    if (TMR3IF) { // timer 3 for stepper motor
+    if (TMR3IE && TMR3IF) { // timer 3 for stepper motor
         TMR3IF = 0;
 
         if (display_state == ST_LOADING_FOOD) {
@@ -542,27 +534,34 @@ void interrupt handleInterrupt() {
     if (TMR1IE && TMR1IF) { // any timer 1 (RTC) interrupts?
         TMR1IF = 0;
         TMR1 = TMR1_RESET_VALUE;
-        LATC5 ^= 1;
         addOneSecond();
+        LATC5 ^= 1;
 
-        if (nextFeed != -1
-                && minutes == nextFeedMinute
-                && hours == nextFeedHour
-                && display_state != ST_LOADING_FOOD) {
+        if (display_state != ST_LOADING_FOOD
+                && feedings[nextFeed].quantity > 0
+                && minutes == feedings[nextFeed].minute
+                && hours == feedings[nextFeed].hour) {
+            wakeUp();
+            sleepCounter = 0;
             display_state = ST_LOADING_FOOD;
+            renderScreenTemplate(display_state);
+            updateScreen();
             weight_tare = 0;
-            TMR0 = 0x0000;
-            TMR1ON = 1;
+            weight = 0;
+            TMR0 = WEIGHT_TIMER;
+            TMR0ON = 1;
             motorStart();
         }
 
-        sleepCounter++;
-
-        if (display_state != ST_LOADING_FOOD && (wasSleeping || sleepCounter >= SLEEP_TIMEOUT)) {
-            goToSleep();
-        } else {
-            updateScreen();
+        if (display_state != ST_LOADING_FOOD) {
+            sleepCounter++;
+            if ((wasSleeping || sleepCounter >= SLEEP_TIMEOUT)) {
+                goToSleep();
+            } else {
+                updateScreen();
+            }
         }
+
         return;
     }
 
@@ -613,10 +612,8 @@ void interrupt handleInterrupt() {
 }
 
 void reload_feedings() {
-    unsigned char i;
-    for (i = 0; i < 4; i++) {
-        read_feed_from_eeprom(i);
-    }
+//    read_feed_from_eeprom(0);
+//    read_feed_from_eeprom(1);
     totalQty = getTotalQty();
     totalFeedings = getTotalFeedings();
 }
@@ -624,18 +621,15 @@ void reload_feedings() {
 //timer0 that is causing interrupt when we sample weight
 
 void setupWeightTimer() {
-    TMR0 = 0x0000;
+    TMR0 = WEIGHT_TIMER;
     T0SE = 0; //low-to-high transition
     T0CS = 0; //internal oscilator
     TMR0IE = 1; //enable timer interrupt
     T08BIT = 0; //16-bit
-    T0PS0 = 0;
-    T0PS1 = 1;
-    T0PS2 = 0; //1:8 prescaler, 
+    PSA = 1; //no prescaler
 }
 
 void main(void) {
-    reload_feedings();
     setupPorts();
 
     //after ports are initiated, set up lcd and render initial screen
@@ -643,14 +637,18 @@ void main(void) {
     lcdClear();
 
     display_state = ST_START_SCREEN;
-    renderScreenTemplate(display_state);
 
     //enable weight sensor and clock
     initHX711();
 
     setupRealTimeClock();
 
-    findNextLoad();
+    reload_feedings();
+    if(timeAfter(feedings[1].hour, feedings[1].minute, feedings[0].hour, feedings[0].minute)) {
+        nextFeed = 0;
+    } else {
+        nextFeed = 1;
+    }
 
     setupWeightTimer();
 
