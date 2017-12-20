@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 
-void UART_Init(const long int baudrate);
+void UART_Init(const long baudrate);
 
 unsigned char UART_Read();
 

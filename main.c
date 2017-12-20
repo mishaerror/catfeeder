@@ -44,7 +44,7 @@ typedef struct {
 #define FEEDINGS_EEPROM_ADDR 0;
 
 FEEDING_t feedings[2] = {
-    {0, 1, 10},
+    {0, 0, 10},
     {0, 2, 15}
 };
 
@@ -60,6 +60,12 @@ unsigned char totalFeedings = 0;
 
 long weight_tare = 0;
 long weight = 0;
+char byteCounter = 0;
+unsigned long weightBuffer[] = {0,0,0};
+long tmpWeight = 0;
+long sampledWeight = 0;
+char samples;
+long currentWeight = 0;
 
 DISPLAY_STATE_t display_state;
 
@@ -494,9 +500,9 @@ void updateScreen() {
 void checkWeight() {
 
     if (weight_tare == 0) {
-        weight_tare = getWeight();
+        weight_tare = currentWeight;
     }
-    long measure = getWeight();
+    long measure = currentWeight;
     
     weight = measure - weight_tare;
 
@@ -516,6 +522,35 @@ void checkWeight() {
 
 void interrupt handleInterrupt() {
 
+    if(RCIE && RCIF) {
+        //received one byte via serial
+        RCIF = 0;
+        
+            if(byteCounter>3) {
+                if(tmpWeight & 0x800000) {
+                tmpWeight |= 0xFF000000;
+                byteCounter = 0;
+                tmpWeight = tmpWeight ^ 0x80000000;
+                sampledWeight += tmpWeight;
+                samples++;
+                
+                if(samples>2) {
+                    samples = 0;
+                    currentWeight = sampledWeight / 3;
+                }
+                CREN = 0;
+                TRISC6 = 0;
+                LATC6 = 1;
+                LATC6 = 0;
+                TRISC6 = 1;
+                CREN = 1;
+            }
+        } else {
+            tmpWeight = (tmpWeight << 8) | RCREG;
+            byteCounter++;
+        }
+    }
+    
     if (TMR0IE && TMR0IF && display_state == ST_LOADING_FOOD) {
         TMR0IF = 0;
         TMR0 = WEIGHT_TIMER;
