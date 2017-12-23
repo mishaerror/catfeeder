@@ -14,6 +14,7 @@
  */
 #include "weightsensor.h"
 #include "xcincludes.h"
+#include "stepper_motor.h"
 
 #define SCALE_FACTOR 2100
 #define NOF_SAMPLES 3
@@ -38,15 +39,8 @@ void turnOffHX711() {
 long getWeight() {
     long data = 0;
     long dataSum = 0x00;
-
-    turnOnHX711();
     
-    while(HX_DT == 1);  // wait HX711 ready
-    // dummy conversion next : channel A@128
-    for(char i=0; i<25; i++){
-        HX_SCK = 1;
-        HX_SCK = 0;
-    }
+    while(HX_DT);  // wait HX711 ready
 
     for(char averaging  = 0; averaging < NOF_SAMPLES; averaging++) {
         while(HX_DT == 1);  // wait HX711 ready
@@ -68,8 +62,6 @@ long getWeight() {
         dataSum += data;
     }
     
-    turnOffHX711();
-
     return (dataSum / NOF_SAMPLES)/SCALE_FACTOR;
 }
 

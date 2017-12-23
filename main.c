@@ -14,7 +14,6 @@
 #include "weightsensor.h"
 
 #define BLANK_LINE "                "
-#define WEIGHT_TIMER 0xC000
 
 enum KEY_PRESSED_t {
     KEY_ENTER,
@@ -60,12 +59,13 @@ unsigned char totalFeedings = 0;
 
 long weight_tare = 0;
 long weight = 0;
-char byteCounter = 0;
-unsigned long weightBuffer[] = {0,0,0};
-long tmpWeight = 0;
-long sampledWeight = 0;
-char samples;
-long currentWeight = 0;
+
+#define WEIGHT_COUNTER_HIGH 0xFC00
+#define WEIGHT_COUNTER_MEDIUM 0xFC80
+#define WEIGHT_COUNTER_LOW 0xFE00
+
+unsigned int weightCounter = 0;
+unsigned int weightCounterOverflow = WEIGHT_COUNTER_HIGH;
 
 DISPLAY_STATE_t display_state;
 
@@ -124,6 +124,7 @@ void wakeUp() {
     }
     wasSleeping = 0;
     lcdOn(1);
+    RCIE = 1;
     renderScreenTemplate(display_state);
     sleepCounter = 0;
 }
@@ -428,7 +429,7 @@ void write_feeding_screen(char feedNo, const char* feedHour, const char* feedMin
     lcdWriteChar(feedNo);
     lcdSetCursor(0, 8);
     lcdWriteString(feedHour);
-    lcdSetCursor(0, 11);
+    lcdWriteChar(':');
     lcdWriteString(feedMinute);
     lcdSetCursor(1, 9);
     lcdWriteString(feedQty);
@@ -500,70 +501,44 @@ void updateScreen() {
 void checkWeight() {
 
     if (weight_tare == 0) {
-        weight_tare = currentWeight;
+        weight_tare = getWeight();
+        weight = 0;
+        return;
     }
-    long measure = currentWeight;
+    long measure = getWeight();
     
     weight = measure - weight_tare;
 
-
+    
     if (weight >= feedings[nextFeed].quantity) {
-        TMR0ON = 0;
         motorStop();
         weight = 0;
         weight_tare = 0;
         findNextLoad();
+        turnOffHX711();
         display_state = ST_START_SCREEN;
         renderScreenTemplate(display_state);
+    } else if(weight > (feedings[nextFeed].quantity * 3) / 4) {
+        motorSpeed(MOTOR_LOW);
+        weightCounterOverflow = WEIGHT_COUNTER_LOW;
+    } else if(weight > (feedings[nextFeed].quantity ) / 2) {
+        motorSpeed(MOTOR_MIDDLE);
+        weightCounterOverflow = WEIGHT_COUNTER_MEDIUM;
     }
     updateScreen();
 
 }
 
 void interrupt handleInterrupt() {
-
-    if(RCIE && RCIF) {
-        //received one byte via serial
-        RCIF = 0;
-        
-            if(byteCounter>3) {
-                if(tmpWeight & 0x800000) {
-                tmpWeight |= 0xFF000000;
-                byteCounter = 0;
-                tmpWeight = tmpWeight ^ 0x80000000;
-                sampledWeight += tmpWeight;
-                samples++;
-                
-                if(samples>2) {
-                    samples = 0;
-                    currentWeight = sampledWeight / 3;
-                }
-                CREN = 0;
-                TRISC6 = 0;
-                LATC6 = 1;
-                LATC6 = 0;
-                TRISC6 = 1;
-                CREN = 1;
-            }
-        } else {
-            tmpWeight = (tmpWeight << 8) | RCREG;
-            byteCounter++;
-        }
-    }
-    
-    if (TMR0IE && TMR0IF && display_state == ST_LOADING_FOOD) {
-        TMR0IF = 0;
-        TMR0 = WEIGHT_TIMER;
-        checkWeight();
-        ClrWdt();
-        LATC5 ^= 1;
-    }
-
     if (TMR3IE && TMR3IF) { // timer 3 for stepper motor
         TMR3IF = 0;
 
-        if (display_state == ST_LOADING_FOOD) {
-            motorStep();
+        motorStep();
+        
+        weightCounter++;
+        if(weightCounter & weightCounterOverflow) {
+            weightCounter = 0;
+            checkWeight();
         }
     }
 
@@ -584,8 +559,8 @@ void interrupt handleInterrupt() {
             updateScreen();
             weight_tare = 0;
             weight = 0;
-            TMR0 = WEIGHT_TIMER;
-            TMR0ON = 1;
+
+            turnOnHX711();
             motorStart();
         }
 
@@ -649,21 +624,10 @@ void interrupt handleInterrupt() {
 }
 
 void reload_feedings() {
-//    read_feed_from_eeprom(0);
-//    read_feed_from_eeprom(1);
+    read_feed_from_eeprom(0);
+    read_feed_from_eeprom(1);
     totalQty = getTotalQty();
     totalFeedings = getTotalFeedings();
-}
-
-//timer0 that is causing interrupt when we sample weight
-
-void setupWeightTimer() {
-    TMR0 = WEIGHT_TIMER;
-    T0SE = 0; //low-to-high transition
-    T0CS = 0; //internal oscilator
-    TMR0IE = 1; //enable timer interrupt
-    T08BIT = 0; //16-bit
-    PSA = 1; //no prescaler
 }
 
 void main(void) {
@@ -686,8 +650,6 @@ void main(void) {
     } else {
         nextFeed = 1;
     }
-
-    setupWeightTimer();
 
     enableInterrupts();
 

@@ -11,7 +11,6 @@
 #define MOTOR_IN4 LATA3
 
 unsigned char _motor_step = 0;
-unsigned char _motor_on = 0;
 unsigned short _motor_speed;
 
 void motorStart() {
@@ -34,16 +33,26 @@ void motorStart() {
     TMR3ON = 1;
 }
 
+void motorSpeed(motor_speed_t speed) {
+    switch(speed) {
+        case MOTOR_LOW:
+            _motor_speed = TMR3_QTR_SPEED;
+            break;
+        case MOTOR_MIDDLE:
+            _motor_speed = TMR3_HALF_SPEED;
+            break;
+        case MOTOR_HIGH:
+            _motor_speed = TMR3_FULL_SPEED;
+            break;
+    }
+}
+
 void motorStop() {
     TMR3ON = 0;
     TMR3IE = 0;
-    _motor_on = 0;
 }
 
 void motorStep() {
-    if(!_motor_on) {
-        return;
-    }
     TMR3 = _motor_speed;
     _motor_step++;
     if(_motor_step > 7) {
