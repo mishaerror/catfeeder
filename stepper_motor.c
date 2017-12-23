@@ -20,6 +20,11 @@ void motorStart() {
     TRISAbits.RA2 = 0;
     TRISAbits.RA3 = 0;
     
+    MOTOR_IN1 = 0;
+    MOTOR_IN2 = 0;
+    MOTOR_IN3 = 0;
+    MOTOR_IN4 = 0;
+    
     TMR3CS = 1;// sync on timer1 (real time clock)
     T3SYNC = 1;
     RD163 = 1; //16bit read of timer 3
@@ -50,6 +55,10 @@ void motorSpeed(motor_speed_t speed) {
 void motorStop() {
     TMR3ON = 0;
     TMR3IE = 0;
+    MOTOR_IN1 = 0;
+    MOTOR_IN2 = 0;
+    MOTOR_IN3 = 0;
+    MOTOR_IN4 = 0;
 }
 
 void motorStep() {
