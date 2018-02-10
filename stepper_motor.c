@@ -1,7 +1,7 @@
 
 #include "stepper_motor.h"
 
-#define TMR3_FULL_SPEED 0xFFE0
+#define TMR3_FULL_SPEED 0xFFC0
 #define TMR3_HALF_SPEED 0xFF70
 #define TMR3_QTR_SPEED  0xFF30
 
@@ -13,7 +13,7 @@
 unsigned char _motor_step = 0;
 unsigned short _motor_speed;
 
-void motorStart() {
+void stepperStart() {
     
     TRISAbits.RA0 = 0;
     TRISAbits.RA1 = 0;
@@ -38,7 +38,7 @@ void motorStart() {
     TMR3ON = 1;
 }
 
-void motorSpeed(motor_speed_t speed) {
+void stepperSpeed(motor_speed_t speed) {
     switch(speed) {
         case MOTOR_LOW:
             _motor_speed = TMR3_QTR_SPEED;
@@ -52,7 +52,7 @@ void motorSpeed(motor_speed_t speed) {
     }
 }
 
-void motorStop() {
+void stepperStop() {
     TMR3ON = 0;
     TMR3IE = 0;
     MOTOR_IN1 = 0;
@@ -61,37 +61,38 @@ void motorStop() {
     MOTOR_IN4 = 0;
 }
 
-void motorStep() {
+void stepperStep() {
     TMR3 = _motor_speed;
     _motor_step++;
-    if(_motor_step > 7) {
+    if(_motor_step > 3) {
         _motor_step = 0;
     }
     switch (_motor_step) {
         case 0:
-            MOTOR_IN1 = 0;
-            MOTOR_IN2 = 0;
+            MOTOR_IN1 = 1;
+            MOTOR_IN2 = 1;
             MOTOR_IN3 = 0;
-            MOTOR_IN4 = 1;
-            break;
-        case 1:
-            MOTOR_IN1 = 0;
-            MOTOR_IN2 = 0;
-            MOTOR_IN3 = 1;
-            MOTOR_IN4 = 1;
-            break;
-        case 2:
-            MOTOR_IN1 = 0;
-            MOTOR_IN2 = 0;
-            MOTOR_IN3 = 1;
             MOTOR_IN4 = 0;
             break;
-        case 3:
+        case 1:
             MOTOR_IN1 = 0;
             MOTOR_IN2 = 1;
             MOTOR_IN3 = 1;
             MOTOR_IN4 = 0;
             break;
+        case 2:
+            MOTOR_IN1 = 0;
+            MOTOR_IN2 = 0;
+            MOTOR_IN3 = 1;
+            MOTOR_IN4 = 1;
+            break;
+        case 3:
+            MOTOR_IN1 = 1;
+            MOTOR_IN2 = 0;
+            MOTOR_IN3 = 0;
+            MOTOR_IN4 = 1;
+            break;
+        /*
         case 4:
             MOTOR_IN1 = 0;
             MOTOR_IN2 = 1;
@@ -116,6 +117,7 @@ void motorStep() {
             MOTOR_IN3 = 0;
             MOTOR_IN4 = 1;
             break;
+         * */
         default:
             MOTOR_IN1 = 0;
             MOTOR_IN2 = 0;

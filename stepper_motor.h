@@ -14,12 +14,12 @@ typedef enum MOTOR_SPEED {
     MOTOR_LOW, MOTOR_MIDDLE, MOTOR_HIGH
 } motor_speed_t;
 
-void motorStep();
+void stepperStep();
 
-void motorStart();
+void stepperStart();
 
-void motorStop();
+void stepperStop();
 
-void motorSpeed(motor_speed_t speed);
+void stepperSpeed(motor_speed_t speed);
 #endif	/* STEPPER_MOTOR_H */
 

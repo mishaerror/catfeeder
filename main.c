@@ -9,11 +9,20 @@
 #include "xcincludes.h"
 #include "realtimeclock.h"
 #include "lcd.h"
-#include "stepper_motor.h"
+
+//#define USE_SERVO 
+
+#ifdef USE_SERVO
+    #include "servo_motor.h"
+#else
+    #include "stepper_motor.h"
+#endif
+
 #include "utils.h"
 #include "weightsensor.h"
 
 #define BLANK_LINE "                "
+
 
 enum KEY_PRESSED_t {
     KEY_ENTER,
@@ -42,6 +51,7 @@ typedef struct {
 
 #define FEEDINGS_EEPROM_ADDR 0;
 
+//initial values are for testing purposes
 FEEDING_t feedings[2] = {
     {0, 0, 10},
     {0, 2, 15}
@@ -59,13 +69,6 @@ unsigned char totalFeedings = 0;
 
 long weight_tare = 0;
 long weight = 0;
-
-#define WEIGHT_COUNTER_HIGH 0xFC00
-#define WEIGHT_COUNTER_MEDIUM 0xFC80
-#define WEIGHT_COUNTER_LOW 0xFE00
-
-unsigned int weightCounter = 0;
-unsigned int weightCounterOverflow = WEIGHT_COUNTER_HIGH;
 
 DISPLAY_STATE_t display_state;
 
@@ -85,6 +88,11 @@ void goToSleep() {
     }
     //turn off periferrals
     turnOffHX711();
+#ifdef USE_SERVO
+    servoStop();
+#else
+    stepperStop();
+#endif
     lcdOn(0);
     wasSleeping = 1;
     Sleep();
@@ -499,7 +507,6 @@ void updateScreen() {
 }
 
 void checkWeight() {
-
     if (weight_tare == 0) {
         weight_tare = getWeight();
         weight = 0;
@@ -511,37 +518,43 @@ void checkWeight() {
 
     
     if (weight >= feedings[nextFeed].quantity) {
-        motorStop();
+#ifdef USE_SERVO 
+        servoStop();
+#else
+        stepperStop();
+#endif
+        hxResetRead();
         weight = 0;
         weight_tare = 0;
         findNextLoad();
         turnOffHX711();
         display_state = ST_START_SCREEN;
         renderScreenTemplate(display_state);
-    } else if(weight > (feedings[nextFeed].quantity * 3) / 4) {
-        motorSpeed(MOTOR_LOW);
-        weightCounterOverflow = WEIGHT_COUNTER_LOW;
-    } else if(weight > (feedings[nextFeed].quantity ) / 2) {
-        motorSpeed(MOTOR_MIDDLE);
-        weightCounterOverflow = WEIGHT_COUNTER_MEDIUM;
+    } 
+#ifndef USE_SERVO
+    else if(weight > (feedings[nextFeed].quantity * 95) / 100) {
+        stepperSpeed(MOTOR_LOW);
+    } else if(weight > (feedings[nextFeed].quantity * 4) / 5) {
+        stepperSpeed(MOTOR_MIDDLE);
     }
+#endif
     updateScreen();
-
 }
 
 void interrupt handleInterrupt() {
-    if (TMR3IE && TMR3IF) { // timer 3 for stepper motor
-        TMR3IF = 0;
-
-        motorStep();
-        
-        weightCounter++;
-        if(weightCounter & weightCounterOverflow) {
-            weightCounter = 0;
-            checkWeight();
-        }
+#ifdef USE_SERVO
+    if(TMR2IE && TMR2IF) {
+        servoPulse();
+        TMR2IF = 0;
+        hxCheckRead();
     }
-
+#else
+    if (TMR3IE && TMR3IF) { // timer 3 for stepper motor
+        stepperStep();
+        TMR3IF = 0;
+        hxCheckRead();
+    }
+#endif
     if (TMR1IE && TMR1IF) { // any timer 1 (RTC) interrupts?
         TMR1IF = 0;
         TMR1 = TMR1_RESET_VALUE;
@@ -561,7 +574,11 @@ void interrupt handleInterrupt() {
             weight = 0;
 
             turnOnHX711();
-            motorStart();
+#ifdef USE_SERVO
+            servoStart();
+#else
+            stepperStart();
+#endif
         }
 
         if (display_state != ST_LOADING_FOOD) {
@@ -572,8 +589,9 @@ void interrupt handleInterrupt() {
             } else {
                 updateScreen();
             }
+        } else {
+            checkWeight();
         }
-
         return;
     }
 
@@ -641,21 +659,26 @@ void main(void) {
 
     //enable weight sensor and clock
     initHX711();
-
+    
+#ifdef USE_SERVO
+    servoInit();    
+#endif
+    
     setupRealTimeClock();
 
-    reload_feedings();
+    //reload_feedings();
     if(timeAfter(feedings[1].hour, feedings[1].minute, feedings[0].hour, feedings[0].minute)) {
         nextFeed = 0;
     } else {
         nextFeed = 1;
     }
-
     enableInterrupts();
-
+    
     goToSleep(); //sleep by default, wake up on button press or on WDT
 
     while (1) {
-        //
+        if(display_state == ST_LOADING_FOOD) {
+          
+        }
     }
 }

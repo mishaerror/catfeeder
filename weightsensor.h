@@ -14,3 +14,9 @@ long getWeight();
 void turnOnHX711();
 
 void turnOffHX711();
+
+char hxCheckRead();
+
+void hxResetRead();
+
+char isHxReadInProgress();
