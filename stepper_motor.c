@@ -10,8 +10,16 @@
 #define MOTOR_IN3 LATA2
 #define MOTOR_IN4 LATA3
 
+#define STEPS_PER_REV 1000 //some nice people on the web calculated it takes 4076 for full turn using half step method
+#define STEPS_REVERSE 250 //approx 1/4 of forward move
+
+//grains can get stuck so after approx. 1/4 turn forward we step back 1/16
+char reversing = 0;
+
 unsigned char _motor_step = 0;
 unsigned short _motor_speed;
+
+int stepCounter = 0; 
 
 void stepperStart() {
     
@@ -31,6 +39,9 @@ void stepperStart() {
     T3CKPS0 = 0;
     T3CKPS1 = 0;//prescaler 1:1
     _motor_speed = TMR3_FULL_SPEED;
+    
+    stepCounter = 0;
+    reversing = 1;
     
     TMR3 = _motor_speed;
     TMR3IE = 1;// enable timer 3 interrupt
@@ -63,10 +74,32 @@ void stepperStop() {
 
 void stepperStep() {
     TMR3 = _motor_speed;
-    _motor_step++;
-    if(_motor_step > 3) {
+    if(reversing) {
+        if(_motor_step == 0) {
+            _motor_step = 3;
+        } else {
+            _motor_step--;
+        }
+    } else {
+        if(_motor_step == 3) {
+            _motor_step = 0;
+        } else {
+            _motor_step++;
+        }
+    }
+
+    stepCounter++;
+    if(reversing && stepCounter > STEPS_REVERSE) {
+        stepCounter = 0;
+        reversing = 0;
+        _motor_step = 0;
+    } 
+    if(!reversing && stepCounter > STEPS_PER_REV) {
+        stepCounter = 0;
+        reversing = 1;
         _motor_step = 0;
     }
+    
     switch (_motor_step) {
         case 0:
             MOTOR_IN1 = 1;

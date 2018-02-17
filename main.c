@@ -547,12 +547,14 @@ void interrupt handleInterrupt() {
         servoPulse();
         TMR2IF = 0;
         hxCheckRead();
+        return;
     }
 #else
     if (TMR3IE && TMR3IF) { // timer 3 for stepper motor
         stepperStep();
         TMR3IF = 0;
         hxCheckRead();
+        return;
     }
 #endif
     if (TMR1IE && TMR1IF) { // any timer 1 (RTC) interrupts?
